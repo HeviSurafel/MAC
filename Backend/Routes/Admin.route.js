@@ -1,5 +1,25 @@
 const express=require('express');
 const router=express.Router();
-const {AdminLogin}=require('../Controllers/Admin.controller');
-router.post('/login',AdminLogin);
+const {  signup,
+    login,
+    logout,
+    refreshToken,
+    getProfile,
+    getAllUser,
+    requestPasswordReset,
+    resetPassword}=require('../Controllers/Auth.controller');
+const {protectRoute,adminRoute}=require('../Middleware/Protect.route');
+const  AdminController=require('../Controllers/Admin.controller');
+router.post('/login',login);
+router.post('/logout',protectRoute,logout);
+router.post('/users',protectRoute,adminRoute, AdminController.createUser); // Create a new user
+router.get('/users',protectRoute,adminRoute, AdminController.getAllUsers); // Get all users
+router.get('/users/:id',protectRoute,adminRoute, AdminController.getUserById); // Get a user by ID
+router.put('/users/:id',protectRoute,adminRoute, AdminController.updateUser); // Update a user
+router.delete('/users/:id',protectRoute,adminRoute, AdminController.deleteUser); // Delete a user
+router.post('/courses',protectRoute,adminRoute, AdminController.createCourse); // Create a new course
+router.get('/courses', protectRoute,adminRoute,AdminController.getAllCourses); // Get all courses
+router.get('/courses/:id',protectRoute,adminRoute, AdminController.getCourseById); // Get a course by ID
+router.put('/courses/:id',protectRoute,adminRoute, AdminController.updateCourse); // Update a course
+router.delete('/courses/:id',protectRoute,adminRoute, AdminController.deleteCourse); // Delete a course
 module.exports=router;
