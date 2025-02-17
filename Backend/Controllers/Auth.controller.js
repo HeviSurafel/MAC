@@ -6,10 +6,10 @@ const transporter = require('../config/nodemailer');
 
 // Generate tokens
 const generateToken = async (userId) => {
-  const accessToken = jwt.sign({ userId }, process.env.accessTokeSecret, {
+  const accessToken = jwt.sign({ userId }, "accessTokenSecret", {
     expiresIn: '15m',
   });
-  const refreshToken = jwt.sign({ userId }, process.env.refreshTokenSecret, {
+  const refreshToken = jwt.sign({ userId }, "refreshTokenSecret", {
     expiresIn: '7d',
   });
   return { accessToken, refreshToken };
@@ -78,7 +78,7 @@ const login = async (req, res) => {
     await storeRefreshToken(user._id, refreshToken);
     res.status(200).json({
       id: user._id,
-      name: `${user.firstName} ${user.lastName}`,
+      name: user.firstName,
       email: user.email,
       role: user.role,
       message: 'User logged in successfully',
@@ -94,7 +94,7 @@ const logout = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   try {
     if (refreshToken) {
-      const decode = jwt.verify(refreshToken, process.env.refreshTokenSecret);
+      const decode = jwt.verify(refreshToken, "refreshTokenSecret");
       await redis.del(`refresh_token:${decode.userId}`);
     }
     res.clearCookie('accessToken');
@@ -113,7 +113,7 @@ const refreshToken = async (req, res) => {
     if (!refreshToken) {
       return res.status(401).json({ message: 'No token found' });
     }
-    const decoded = jwt.verify(refreshToken, process.env.refreshTokenSecret);
+    const decoded = jwt.verify(refreshToken, "refreshTokenSecret");
     const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
     if (refreshToken !== storedToken) {
       return res.status(401).json({ message: 'Invalid refresh token' });

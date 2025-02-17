@@ -3,8 +3,16 @@ const app=express();
 const dotenv=require('dotenv').config();
 const cors=require('cors');
 const bodyParser=require('body-parser');
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+app.use(express.json());
 const Database=require("./DatabaseConnection/db.connection")
-app.use(cors());
+app.use(cors({
+    origin: "http://localhost:5173", // Allow only this origin
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Allowed HTTP methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    credentials: true, // Allow cookies to be sent
+  }));
 const PORT=process.env.PORT;
 app.use(bodyParser.urlencoded({extended:true}));
 const AdminRoute=require("./Routes/Admin.route");

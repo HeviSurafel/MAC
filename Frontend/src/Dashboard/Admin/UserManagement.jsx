@@ -1,60 +1,79 @@
-// Updated React code with PDF certificate and background text
-
-import React, { useState } from "react";
-import { FaEdit, FaTrash, FaSearch, FaPlus, FaEye } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { FaSearch, FaPlus, FaEye, FaUserSlash, FaTrash } from "react-icons/fa";
 import jsPDF from "jspdf";
-
+import  AdminStore from "../../Store/AdminStore"
 const UserManagement = () => {
-  // Mock user data
-  const [users, setUsers] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", status: "Active" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", role: "User", status: "Inactive" },
-    { id: 3, name: "Alice Johnson", email: "alice@example.com", role: "User", status: "Active" },
-  ]);
-
+  const {users,createUser,getAllUsers,deleteUser}=AdminStore();
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Generate Certificate PDF
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    role: "",
+    dateOfBirth: "",
+    address: "",
+    phoneNumber: "",
+    emergencyContact: "",
+    course: "",
+    department: "",
+  });
+  useEffect(() => {
+    getAllUsers();
+  }, []);
   const generateCertificate = (user) => {
     const doc = new jsPDF();
-
-    // Add watermark background text
     doc.setTextColor(200, 200, 200);
     doc.setFontSize(50);
     doc.text("Makalla Technology Solution", 35, 140, { angle: 45 });
-
-    // Add certificate content
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(20);
     doc.text("Certificate of Completion", 60, 60);
-
     doc.setFontSize(14);
     doc.text(`This is to certify that`, 70, 80);
     doc.setFontSize(16);
     doc.text(`${user.name}`, 70, 90);
-
     doc.setFontSize(14);
     doc.text(`has successfully completed the course.`, 55, 100);
-
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 60, 120);
     doc.text(`Signature: ___________________`, 60, 140);
-
-    // Save the PDF
     doc.save(`${user.name}_certificate.pdf`);
   };
 
-  // Filter users based on search query
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const deleteUserById = (id) => {
+    deleteUser(id);
+  };
+
+  const suspendUser = (id) => {
+    // setUsers(users.map(user => user.id === id ? { ...user, status: "Suspended" } : user));
+  };
+
+  const createUserNewUser = () => {
+    // Add new user logic
+    const newUser = { firstName: formData.firstName ,lastName:formData.lastName, email: formData.email, role: formData.role, status: "Active" };
+    createUser([...users, newUser]);
+    setIsModalOpen(false); // Close the modal after adding
+  };
+  
+
+  const handlePasswordGeneration = () => {
+    const password = Math.random().toString(36).slice(-8); // Generates a random 8-character password
+    setFormData({ ...formData, password });
+  };
+
+  const filteredUsers = users?.filter((user) => {
+    const name = user?.firstName?.toLowerCase() || '';
+    const email = user?.email?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+    
+    return name.includes(query) || name.includes(query);
+  });
+  
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">User Management</h1>
-
-      {/* Search Bar */}
       <div className="flex justify-between items-center mb-6">
         <div className="relative">
           <input
@@ -66,10 +85,163 @@ const UserManagement = () => {
           />
           <FaSearch className="absolute left-3 top-3 text-gray-400" />
         </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600"
+        >
+          <FaPlus className="inline mr-2" /> Add User
+        </button>
       </div>
 
-      {/* User Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-8 w-[600px] max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">Add User</h2>
+            <form>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div className="flex items-center justify-center  mb-4 space-x-2">
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <input
+                    type="text"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePasswordGeneration}
+                  className="bg-gray-300 text-sm  p-2 rounded-lg"
+                >
+                  Generate
+                </button>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select Role</option>
+                  <option value="student">Student</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              {formData.role === "student" && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Address</label>
+                    <input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input
+                      type="text"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
+                    <input
+                      type="text"
+                      value={formData.emergencyContact}
+                      onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Course</label>
+                    <input
+                      type="text"
+                      value={formData.course}
+                      onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                </>
+              )}
+              {formData.role === "instructor" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">Department</label>
+                  <input
+                    type="text"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+              )}
+              <div className="flex justify-between mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={createUserNewUser}
+                  className="bg-blue-500 text-white px-6 py-2 rounded-lg"
+                >
+                  Add User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mt-6">
         <table className="w-full">
           <thead className="bg-gray-100">
             <tr>
@@ -83,24 +255,27 @@ const UserManagement = () => {
           <tbody>
             {filteredUsers.map((user) => (
               <tr key={user.id} className="border-b hover:bg-gray-50 transition duration-200">
-                <td className="p-3">{user.name}</td>
+                <td className="p-3">{user.firstName}</td>
                 <td className="p-3">{user.email}</td>
                 <td className="p-3">{user.role}</td>
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded-full text-sm ${
-                      user.status === "Active" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                      user.status === "Active" ? "bg-green-100 text-green-600" : user.status === "Suspended" ? "bg-yellow-100 text-yellow-600" : "bg-red-100 text-red-600"
                     }`}
                   >
                     {user.status}
                   </span>
                 </td>
-                <td className="p-3">
-                  <button
-                    className="text-blue-500 hover:text-blue-700 mr-2"
-                    onClick={() => generateCertificate(user)}
-                  >
-                    Generate Certificate
+                <td className="p-3 flex space-x-2">
+                  <button className="text-blue-500 hover:text-blue-700" onClick={() => generateCertificate(user)}>
+                    <FaEye />
+                  </button>
+                  <button className="text-yellow-500 hover:text-yellow-700" onClick={() => suspendUser(user.id)}>
+                    <FaUserSlash />
+                  </button>
+                  <button className="text-red-500 hover:text-red-700" onClick={() => deleteUser(user.id)}>
+                    <FaTrash onClick={deleteUserById(user.id)} />
                   </button>
                 </td>
               </tr>

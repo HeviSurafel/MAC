@@ -5,13 +5,15 @@ const jwt = require("jsonwebtoken");
 const protectRoute = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
+
+    console.log(accessToken);
     if (!accessToken) {
       return res
         .status(401)
         .json({ message: "Unauthorized - No access token provided" });
     }
     try {
-      const decoded = jwt.verify(accessToken, process.env.accessTokeSecret);
+      const decoded = jwt.verify(accessToken, "accessTokenSecret");
       const user = await User.findById(decoded.userId).select("-password");
 
       if (!user) {

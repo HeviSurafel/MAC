@@ -1,29 +1,39 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaHome, FaUsers, FaBook, FaCog, FaSignOutAlt } from "react-icons/fa";
+import { MdOutlineSchedule } from "react-icons/md";
+import useAuthStore from "../Store/useAuthStore"; // Import your authentication store
 
 const Sidebar = () => {
   const location = useLocation();
+  const { user } = useAuthStore(); // Get the user data from the store
 
   // Sidebar links
-  const links = [
+  const Adminlinks = [
     { path: "/dashboard", icon: <FaHome />, label: "Dashboard" },
-    { path: "/dashboard/users", icon: <FaUsers />, label: "Users" },
-    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses" },
-    { path: "/dashboard/settings", icon: <FaCog />, label: "Settings" },
+    { path: "/dashboard/users", icon: <FaUsers />, label: "Users", roles: ['admin'] },
+    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile", roles: ['admin', 'user'] },
+    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses", roles: ['admin', 'instructor', 'user'] },
+    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments", roles: ['admin', 'instructor'] },
+    { path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback", roles: ['user'] },
+    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor", roles: ['admin'] },
+    { path: "/dashboard/settings", icon: <FaCog />, label: "Settings", roles: ['admin'] },
   ];
 
+  // Filter links based on user role
+  const filteredLinks = Adminlinks.filter(link => link.roles?.includes(user?.role));
+
   return (
-    <div className="w-64 bg-gray-800 text-white h-screen flex flex-col">
+    <div className="w-64 bg-gray-800 text-white fixed top-0 left-0 h-screen flex flex-col">
       {/* Logo and Title */}
       <div className="p-6">
-        <h1 className="text-2xl font-bold">Makalla Acadamy</h1>
+        <h1 className="text-2xl font-bold">Makalla Academy</h1>
       </div>
 
       {/* Navigation Links */}
       <nav className="flex-1">
         <ul className="space-y-2">
-          {links.map((link) => (
+          {filteredLinks.map((link) => (
             <li key={link.path}>
               <Link
                 to={link.path}

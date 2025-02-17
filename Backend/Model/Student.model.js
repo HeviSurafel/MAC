@@ -6,8 +6,7 @@ const studentRegistrationSchema =  mongoose.Schema({
     address: { type: String, required: true },
     phoneNumber: { type: String, required: true },
     emergencyContact: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+    course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true }, // Reference to Course
   });
   
   module.exports = mongoose.model('StudentRegistration', studentRegistrationSchema);

@@ -1,8 +1,6 @@
 const express=require('express');
 const router=express.Router();
-const {  signup,
-    login,
-    logout,
+const {  
     refreshToken,
     getProfile,
     getAllUser,
@@ -10,8 +8,6 @@ const {  signup,
     resetPassword}=require('../Controllers/Auth.controller');
 const {protectRoute,adminRoute}=require('../Middleware/Protect.route');
 const  AdminController=require('../Controllers/Admin.controller');
-router.post('/login',login);
-router.post('/logout',protectRoute,logout);
 router.post('/users',protectRoute,adminRoute, AdminController.createUser); // Create a new user
 router.get('/users',protectRoute,adminRoute, AdminController.getAllUsers); // Get all users
 router.get('/users/:id',protectRoute,adminRoute, AdminController.getUserById); // Get a user by ID

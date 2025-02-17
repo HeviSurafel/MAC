@@ -1,7 +1,7 @@
 import React from 'react';
 import DashboardOverview from '../Dashboard/DashboardOverview';
-import UserManagement from './CourseManagement';
-import CourseManagement from './CourseManagement';
+import UserManagement from './Admin/CourseManagement';
+import CourseManagement from './Admin/CourseManagement';
 
 const MainContent = ({ activeTab }) => {
     // Determine which component to render based on the activeTab prop

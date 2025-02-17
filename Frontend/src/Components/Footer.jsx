@@ -48,13 +48,13 @@ const Footer = () => {
           <ul className="mt-4">
             {['Web Development', 'App Development', 'Computer Maintenance', 'Graphics Design'].map(
               (item, index) => (
-              <li
-                key={index}
-                className="py-2 text-gray-200 hover:text-white transition duration-200 cursor-pointer"
-              >
-                {item}
-              </li>
-            ))}
+                <li
+                  key={index}
+                  className="py-2 text-gray-200 hover:text-white transition duration-200 cursor-pointer"
+                >
+                  {item}
+                </li>
+              ))}
           </ul>
         </div>
 
@@ -79,7 +79,6 @@ const Footer = () => {
         </p>
       </div>
     </div>
-    
   );
 };
 

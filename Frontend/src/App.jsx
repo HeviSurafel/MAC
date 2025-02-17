@@ -1,44 +1,71 @@
 import React from "react";
-import { Route, Routes, Outlet } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import LoginPage from "./Pages/LoginPage";
 import Layout from "./Layout/Layout";
 import HomePage from "./Pages/HomePage";
 import ContactUsPage from "./Pages/ContactUsPage";
 import AboutUsPage from "./Pages/AboutUsPage";
 import ServicePage from "./Pages/ServicePage";
-import DashboardOverview from "./Dashboard/Admin/DashboardOverview";
 import UserManagement from "./Dashboard/Admin/UserManagement";
 import CourseManagement from "./Dashboard/Admin/CourseManagement";
-import DashboardLayout from "./Dashboard/Admin/DashboardLayout";
-import StudentDashboardLayout from "./Dashboard/Student/DashboardLayout"
+import DashboardLayout from "./Dashboard/DashboardLayout";
+import MainContent from "./Dashboard/MainContent";
+import DashboardOverview from "./Dashboard/DashboardOverview";
+import Profile from "./Dashboard/Profile/Profile";
+import AssessmentManagement from "./Dashboard/AssessmentManagement";
+import FeedbackPage from "./Dashboard/Student/FeedbackPage";
+import InstructorsPage from "./Dashboard/Admin/InstructorsPage";
+import SettingsPage from "./Pages/SettingsPage";
+import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./ProtectedRoute";
 
-// Dashboard Layout Component
-
+// Define roles
+const ROLES = {
+  ADMIN: "admin",
+  STUDENT: "student",
+  INSTRUCTOR: "instructor",
+  AcadamicDirector: "AcadamicDirector",
+};
 
 function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Layout />}>
-        <Route index element={<LoginPage />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/contact" element={<ContactUsPage />} />
-        <Route path="/about" element={<AboutUsPage />} />
-        <Route path="/service" element={<ServicePage />} />
+    <div>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/contact" element={<ContactUsPage />} />
+          <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/service" element={<ServicePage />} />
 
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardOverview />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="courses" element={<CourseManagement />} />
-        
+          {/* Protected Dashboard Routes */}
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardOverview />} />
+            
+            {/* Admin-Only Routes */}
+            <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+              <Route path="users" element={<UserManagement />} />
+              <Route path="courses" element={<CourseManagement />} />
+              <Route path="instructor" element={<InstructorsPage />} />
+            </Route>
+
+            {/* Student-Only Routes */}
+            <Route element={<ProtectedRoute allowedRoles={[ROLES.STUDENT]} />}>
+              <Route path="feedback" element={<FeedbackPage />} />
+            </Route>
+
+            {/* Shared Routes (Accessible by All Authenticated Users) */}
+            <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.STUDENT, ROLES.INSTRUCTOR]} />}>
+              <Route path="profile" element={<Profile />} />
+              <Route path="assessments" element={<AssessmentManagement />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
         </Route>
-        <Route path="student" element={<StudentDashboardLayout />} />
-
-        {/* Student Dashboard Routes */}
-  
-      </Route>
-    </Routes>
+      </Routes>
+      <Toaster />
+    </div>
   );
 }
 
