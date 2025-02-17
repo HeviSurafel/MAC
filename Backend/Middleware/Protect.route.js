@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const User = require("../Model/User.model");
 const jwt = require("jsonwebtoken");
+const dotenv=require("dotenv");
+dotenv.config();
 const protectRoute = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
