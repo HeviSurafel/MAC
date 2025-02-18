@@ -2,8 +2,9 @@ import React from 'react';
 import { FaPen } from 'react-icons/fa';
 import Logo from "../../assets/image01.jpg";
 
-const ProfileSection = ({ onEdit }) => (
-  <div className="flex items-center justify-between mb-6 p-4 border border-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+function ProfileSection({onEdit}) {
+  return(
+    <div className="flex items-center justify-between mb-6 p-4 border border-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-center space-x-4">
       <img
         src={Logo}
@@ -11,7 +12,7 @@ const ProfileSection = ({ onEdit }) => (
         className="h-16 w-16 rounded-full"
       />
       <div>
-        <div className="text-xl font-semibold">Jack Adams</div>
+        <div className="text-xl font-semibold"></div>
         <div className="text-sm text-gray-500">Product Designer</div>
         <div className="text-sm text-gray-500">Los Angeles, California, USA</div>
       </div>
@@ -26,6 +27,8 @@ const ProfileSection = ({ onEdit }) => (
       </span>
     </button>
   </div>
-);
+   )
+}
 
-export default ProfileSection;
+export default ProfileSection
+

@@ -1,9 +1,11 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import useAuthStore from "./Store/useAuthStore"; // Ensure this has user role data
-
+import {useUserStore} from "./Store/useAuthStore"; 
+import LoadingSpinner from "./Components/LoadingSpinner";// Ensure this has user role data
 const ProtectedRoute = ({ allowedRoles }) => {
-  const { user } = useAuthStore();
+  const { user, checkingAuth } = useUserStore();
+
+  if (checkingAuth) return <LoadingSpinner />;
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -15,5 +17,6 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   return <Outlet />;
 };
+
 
 export default ProtectedRoute;

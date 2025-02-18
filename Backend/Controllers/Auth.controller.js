@@ -135,7 +135,7 @@ const refreshToken = async (req, res) => {
 // Get Profile
 const getProfile = async (req, res) => {
   try {
-    res.status(200).json(req.user);
+    res.json(req.user);
   } catch (error) {
     console.error('Get Profile Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
