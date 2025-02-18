@@ -11,19 +11,6 @@ const AdminController = {
       // Step 1: Create the user document
       const user = new User({ firstName, lastName, email, password, role });
       await user.save();
-<<<<<<< Updated upstream
-=======
-      res.status(201).json({user:{
-        id:user._id,
-        name:`${user.firstName} ${user.lastName}`,
-        email:user.email,
-        role:user.role
-      }});
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  },
->>>>>>> Stashed changes
 
       let studentRegistration = null;
       let instructor = null;
@@ -72,8 +59,7 @@ const AdminController = {
   // Get all users
   async getAllUsers(req, res) {
     try {
-       console.log(req.body)
-      const users = await User.find();
+      const users = await User.find({});
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ message: error.message });

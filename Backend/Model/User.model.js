@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
-<<<<<<< Updated upstream
 const bcrypt=require('bcrypt');
-=======
-const bcrypt=require("bcrypt");
->>>>>>> Stashed changes
 const userSchema = mongoose.Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
@@ -16,16 +12,8 @@ const userSchema = mongoose.Schema({
   },{
     timestamps: true
   });
-<<<<<<< Updated upstream
   userSchema.pre("save", async function (next) {
     if (this.isModified("password")) {
-=======
-  userSchema.methods.comparePassword = async function (password) {
-    return bcrypt.compare(password, this.password);
-  }
-  userSchema.pre('save', async function (next) {
-    if (this.isModified('password')) {
->>>>>>> Stashed changes
       this.password = await bcrypt.hash(this.password, 10);
     }
     next();

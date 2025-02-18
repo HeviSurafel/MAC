@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { FaSearch, FaPlus, FaEye, FaUserSlash, FaTrash } from "react-icons/fa";
 import jsPDF from "jspdf";
-import  AdminStore from "../../Store/AdminStore"
+import AdminStore from "../../Store/AdminStore";
+
 const UserManagement = () => {
-  const {users,createUser,getAllUsers,deleteUser}=AdminStore();
+  const { users, createUser, getAllUsers, deleteUser } = AdminStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,9 +20,11 @@ const UserManagement = () => {
     course: "",
     department: "",
   });
+
   useEffect(() => {
     getAllUsers();
   }, []);
+
   const generateCertificate = (user) => {
     const doc = new jsPDF();
     doc.setTextColor(200, 200, 200);
@@ -33,29 +36,34 @@ const UserManagement = () => {
     doc.setFontSize(14);
     doc.text(`This is to certify that`, 70, 80);
     doc.setFontSize(16);
-    doc.text(`${user.name}`, 70, 90);
+    doc.text(`${user.firstName} ${user.lastName}`, 70, 90);
     doc.setFontSize(14);
     doc.text(`has successfully completed the course.`, 55, 100);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 60, 120);
     doc.text(`Signature: ___________________`, 60, 140);
-    doc.save(`${user.name}_certificate.pdf`);
+    doc.save(`${user.firstName}_certificate.pdf`);
   };
 
   const deleteUserById = (id) => {
-    deleteUser(id);
+    deleteUser(id); // Call the deleteUser function from the store
   };
 
   const suspendUser = (id) => {
-    // setUsers(users.map(user => user.id === id ? { ...user, status: "Suspended" } : user));
+    // Logic to suspend user can be added here
   };
 
   const createUserNewUser = () => {
-    // Add new user logic
-    const newUser = { firstName: formData.firstName ,lastName:formData.lastName, email: formData.email, role: formData.role, status: "Active" };
+    const newUser = { 
+      firstName: formData.firstName,
+      lastName: formData.lastName, 
+      email: formData.email, 
+      role: formData.role, 
+      status: "Active",
+      password: formData.password // Consider hashing the password before sending
+    };
     createUser([...users, newUser]);
-    setIsModalOpen(false); // Close the modal after adding
+    setIsModalOpen(false);
   };
-  
 
   const handlePasswordGeneration = () => {
     const password = Math.random().toString(36).slice(-8); // Generates a random 8-character password
@@ -63,13 +71,12 @@ const UserManagement = () => {
   };
 
   const filteredUsers = users?.filter((user) => {
-    const name = user?.firstName?.toLowerCase() || '';
+    const name = (user?.firstName + " " + user?.lastName).toLowerCase() || '';
     const email = user?.email?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
     
-    return name.includes(query) || name.includes(query);
+    return name.includes(query) || email.includes(query);
   });
-  
 
   return (
     <div className="p-6">
@@ -170,42 +177,7 @@ const UserManagement = () => {
                       className="w-full p-2 border rounded-lg"
                     />
                   </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Address</label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input
-                      type="text"
-                      value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
-                    <input
-                      type="text"
-                      value={formData.emergencyContact}
-                      onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Course</label>
-                    <input
-                      type="text"
-                      value={formData.course}
-                      onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                    />
-                  </div>
+                  {/* More fields for students */}
                 </>
               )}
               {formData.role === "instructor" && (
@@ -255,7 +227,7 @@ const UserManagement = () => {
           <tbody>
             {filteredUsers.map((user) => (
               <tr key={user.id} className="border-b hover:bg-gray-50 transition duration-200">
-                <td className="p-3">{user.firstName}</td>
+                <td className="p-3">{user.firstName} {user.lastName}</td>
                 <td className="p-3">{user.email}</td>
                 <td className="p-3">{user.role}</td>
                 <td className="p-3">
@@ -274,8 +246,8 @@ const UserManagement = () => {
                   <button className="text-yellow-500 hover:text-yellow-700" onClick={() => suspendUser(user.id)}>
                     <FaUserSlash />
                   </button>
-                  <button className="text-red-500 hover:text-red-700" onClick={() => deleteUser(user.id)}>
-                    <FaTrash onClick={deleteUserById(user.id)} />
+                  <button className="text-red-500 hover:text-red-700" onClick={() => deleteUserById(user.id)}>
+                    <FaTrash />
                   </button>
                 </td>
               </tr>

@@ -20,6 +20,7 @@ const useUserStore = create((set, get) => ({
         }
     },
     createUser: async (userData) => {
+        console.log(userData);
         set({ loading: true });
         try {
             const res = await axios.post("/users", userData); // Endpoint to create user

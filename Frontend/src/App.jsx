@@ -1,5 +1,6 @@
-import React from "react";
+import React,{useEffect} from "react";
 import { Route, Routes } from "react-router-dom";
+
 import LoginPage from "./Pages/LoginPage";
 import Layout from "./Layout/Layout";
 import HomePage from "./Pages/HomePage";
@@ -9,7 +10,6 @@ import ServicePage from "./Pages/ServicePage";
 import UserManagement from "./Dashboard/Admin/UserManagement";
 import CourseManagement from "./Dashboard/Admin/CourseManagement";
 import DashboardLayout from "./Dashboard/DashboardLayout";
-import MainContent from "./Dashboard/MainContent";
 import DashboardOverview from "./Dashboard/DashboardOverview";
 import Profile from "./Dashboard/Profile/Profile";
 import AssessmentManagement from "./Dashboard/AssessmentManagement";
@@ -18,7 +18,8 @@ import InstructorsPage from "./Dashboard/Admin/InstructorsPage";
 import SettingsPage from "./Pages/SettingsPage";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./ProtectedRoute";
-
+import {useUserStore} from "./Store/useAuthStore"
+import LoadingSpinner from "./Components/LoadingSpinner";
 // Define roles
 const ROLES = {
   ADMIN: "admin",
@@ -28,6 +29,12 @@ const ROLES = {
 };
 
 function App() {
+  const { user, checkAuth, checkingAuth } = useUserStore();
+  useEffect(() => {
+		checkAuth();
+	}, [checkAuth]);
+  if (checkingAuth) return <LoadingSpinner />;
+ 
   return (
     <div>
       <Routes>

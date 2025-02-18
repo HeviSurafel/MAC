@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaBars, FaTimes, FaCaretDown } from "react-icons/fa";
 import logo from "../assets/image01.jpg";
-import useAuthStore from "../Store/useAuthStore";
+import {useUserStore } from "../Store/useAuthStore";
 
 const Navbar = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useUserStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 

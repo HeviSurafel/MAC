@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import useAuthStore from '../Store/useAuthStore';
+import {useUserStore} from "../Store/useAuthStore"
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, loading, user } = useAuthStore();
+  const { login, loading, user } = useUserStore();
 
   useEffect(() => {
     if (user) {
@@ -16,7 +16,7 @@ const LoginPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    login({ email, password });
+    login(email, password );
   };
 
   return (
