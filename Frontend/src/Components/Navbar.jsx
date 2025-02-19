@@ -2,12 +2,29 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaBars, FaTimes, FaCaretDown } from "react-icons/fa";
 import logo from "../assets/image01.jpg";
-import { useUserStore } from "../Store/useAuthStore";
 
 const Navbar = () => {
-  const { user, logout } = useUserStore();
+  const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Get user from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser)); // Parse the stored user if it exists
+    }
+    setLoading(false);
+  }, []);
+
+  // Logout function
+  const handleLogout = (e) => {
+    e.preventDefault();
+    localStorage.removeItem("user"); // Remove user from localStorage
+    setUser(null); // Clear user state
+    window.location.href = "/login"; // Redirect to login page
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -22,12 +39,7 @@ const Navbar = () => {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
-
-  const handleLogout = (e) => {
-    e.preventDefault();
-    logout();
-  };
-
+console.log(user)
   return (
     <nav className="bg-blue-600 shadow-lg fixed w-full z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -73,11 +85,13 @@ const Navbar = () => {
 
           {/* User Profile & Authentication */}
           <div className="hidden md:flex items-center space-x-4">
-            {user?.name ? (
+            {loading ? (
+              <span className="text-white text-sm font-medium">Loading...</span>
+            ) : user ? (
               <div className="relative dropdown">
                 {/* Welcome Message */}
                 <span className="text-white text-sm font-medium">
-                  Welcome, {user?.name}!
+                  Welcome, {user.state.user.name}!
                 </span>
 
                 {/* Dropdown Toggle */}
