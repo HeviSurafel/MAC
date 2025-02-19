@@ -3,16 +3,6 @@ import React,{useState,useEffect} from "react";
 import { FaEye, FaUserSlash, FaTrash } from "react-icons/fa";
 
 const UserTable = ({ users, suspendUser, handleDeleteUser }) => {
-    const [user, setUser] = useState(null);
- 
-    // Get user from localStorage on mount
-    useEffect(() => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser)); // Parse the stored user if it exists
-      }
-    }, []);
-   
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden mt-6">
       <table className="w-full">
@@ -22,7 +12,7 @@ const UserTable = ({ users, suspendUser, handleDeleteUser }) => {
             <th className="p-3 text-left">Email</th>
             <th className="p-3 text-left">Role</th>
             <th className="p-3 text-left">Status</th>
-            <th className="p-3 text-left">Actions</th>
+         {users[0]?.role==="admin"?  <th className="p-3 text-left">Actions</th>:""}
           </tr>
         </thead>
         <tbody>
@@ -49,7 +39,7 @@ const UserTable = ({ users, suspendUser, handleDeleteUser }) => {
                   {user.status}
                 </span>
               </td>
-              {user?.state.user.role==="admin" ?  <td className="p-3 flex space-x-2">
+              {users[0]?.role==="admin" &&(<td className="p-3 flex space-x-2">
                 <button className="text-blue-500 hover:text-blue-700">
                   <FaEye />
                 </button>
@@ -65,8 +55,7 @@ const UserTable = ({ users, suspendUser, handleDeleteUser }) => {
                 >
                   <FaTrash />
                 </button>
-              </td> :""}
-            
+              </td> ) }
             </tr>
           ))}
         </tbody>

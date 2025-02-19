@@ -1,10 +1,10 @@
 import React from 'react';
 import { TypeAnimation } from 'react-type-animation'; // Updated library
-import Logo from '../assets/image01.jpg'; // Ensure the path is correct
+import Logo from '../assets/CODE ACADEMY 1.png'; // Ensure the path is correct
 
 const HeroSection = () => {
   return (
-    <section className="relative bg-gradient-to-r from-blue-600 to-teal-500 text-white py-30 h-[500px]">
+    <section className="relative bg-gradient-to-r from-blue-600 to-teal-500 text-white py-30 h-[600px]">
       <div className="container mx-auto px-6 text-center relative z-10">
         {/* Heading */}
         <h1 className="text-5xl font-bold leading-tight mb-4">
@@ -42,9 +42,10 @@ const HeroSection = () => {
 
       {/* Background Image */}
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{ backgroundImage: `url(${Logo})` }}
-      ></div>
+  className="absolute inset-0 bg-cover bg-center opacity-50"
+  style={{ backgroundImage: `url(${Logo})` }}
+></div>
+
     </section>
   );
 };

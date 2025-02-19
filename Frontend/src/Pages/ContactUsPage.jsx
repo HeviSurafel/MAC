@@ -1,172 +1,114 @@
-import React, { useState } from 'react'
-// import SocialLinks from './../components/social/SocialLinks';
-
-// import { addDoc, collection } from 'firebase/firestore';
+import React, { useState } from 'react';
 
 const ContactUsPage = () => {
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        subject: "",
-        message: ""
-    })
+  // State to hold form data
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: ""
+  });
 
-    const contactCollection = collection(db, "contactdata");
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({ ...prevState, [name]: value }));
+  };
 
-    const handleChange = (e) => {
-        // console.log("typed!!")
-        // console.log(e);
-        // console.log(e.target);
-        // console.log(e.target.name);
-        // console.log(e.target.value);
-
-        const { name, value } = e.target;
-        // console.log(name, value);
-
-        // setFormData({ ..., e.target.name: e.target.value })
-        // setFormData({ ...formData, name: value }) // This will always change the name key's value
-        setFormData({ ...formData, [name]: value }) // This will always change the dynamic name from event key's value
-        // console.log(formData);
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      alert('Message sent successfully!');
+      setFormData({ name: '', email: '', subject: '', message: '' }); // Reset form after submission
+    } catch (error) {
+      console.error("Error sending message: ", error);
+      alert('Something went wrong. Please try again.');
     }
+  };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+  return (
+    <div className="container mx-auto p-8 bg-white">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-blue-600">Get in Touch</h2>
+        <p className="text-lg text-blue-500">We'd love to hear from you! Fill out the form below.</p>
+      </div>
 
-        addDoc(contactCollection, {
-            name: formData.name,
-            email: formData.email,
-            subject: formData.subject,
-            message: formData.message,
-        })
-        // console.log(e);
+      <div className="flex justify-center items-center space-x-8">
+        {/* Left side: Image */}
+        <div className="w-1/2">
+          <img 
+            src="https://via.placeholder.com/400x400" 
+            alt="Contact Us" 
+            className="rounded-lg shadow-lg"
+          />
+        </div>
 
-        // const { name, email, subject, message } = formData;
+        {/* Right side: Contact Form */}
+        <div className="w-1/2 max-w-lg p-6 bg-white border border-blue-300 rounded-lg shadow-lg">
+          <form onSubmit={handleSubmit}>
+            {/* Name and Email Fields */}
+            <div className="mb-4">
+              <input
+                type="text"
+                name="name"
+                placeholder="Your Name"
+                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <input
+                type="email"
+                name="email"
+                placeholder="Your Email"
+                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        // const url = `${firebaseDB}/contact_form_data.json`
+            {/* Subject Field */}
+            <div className="mb-4">
+              <input
+                type="text"
+                name="subject"
+                placeholder="Subject"
+                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.subject}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        // const firebase = `https://education-portal-da01c-default-rtdb.firebaseio.com/contact.json`;
+            {/* Message Field */}
+            <div className="mb-4">
+              <textarea
+                name="message"
+                rows="5"
+                placeholder="How can we help?"
+                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.message}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        /*
-        const data = JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            subject: formData.subject,
-            message: formData.message,
-        })
-        */
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full"
+            >
+              Send Message
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        // postData(firebase, data);
-    }
-
-
-    /* 
-    const postData = async (endpoint, data) => {
-        try {
-            await fetch(endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: data
-            })
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
- */
-
-    return (
-        <>
-        </>
-        // <div className="wrapper">
-        //     <div className="container max-w-[1280px] mx-auto">
-        //         <div className="row flex flex-col wrap lg:flex-row gap-8">
-        //             <div className="col lg:w-1/3 space-y-8 order-2 md:order-1">
-        //                 <div className="row text-center md:text-left">
-        //                     <h2 className='font-extrabold text-2xl md:text-3xl text-purple-900'>Get in touch</h2>
-        //                     <p className='text-gray-600 text-lg'>Looking for help? Fill the form and start a new adventure.</p>
-        //                 </div>
-        //                 <div className="row divider">
-        //                     <hr />
-        //                 </div>
-        //                 <div className='flex flex-col md:flex-row lg:flex-col gap-8 flex-wrap'>
-        //                     <div className="row flex flex-col gap-4">
-        //                         <div>
-        //                             <h3 className='font-bold text-lg'>Headquarters</h3>
-        //                         </div>
-        //                         <div className="row flex gap-4">
-        //                             <div className="icon">🏠</div>
-        //                             <div>
-        //                                 {/* <p className='text-gray-600'>Kathmandu, Nepal</p> */}
-        //                                 {/* <a href="https://maps.app.goo.gl/4kCAaPYLTFCkg1Sp6"></a> */}
-        //                                 <a href="https://maps.app.goo.gl/4kCAaPYLTFCkg1Sp6" target='_blank' className='text-gray-600'>Kathmandu, Nepal</a>
-        //                             </div>
-        //                         </div>
-        //                     </div>
-        //                     <div className="row flex flex-col gap-4">
-        //                         <div>
-        //                             <h3 className='font-bold text-lg'>Phone</h3>
-        //                         </div>
-        //                         <div className="row flex gap-4">
-        //                             <div className="icon">📞</div>
-        //                             <div className='flex flex-col gap-2'>
-        //                                 <a href="tel:+9779817132325" className='text-gray-600'>(+977) 9817132325</a>
-        //                                 <a href="tel:+9779804168680" className='text-gray-600'>(+977) 9804168680</a>
-        //                             </div>
-        //                         </div>
-        //                     </div>
-        //                     <div className="row flex flex-col gap-4">
-        //                         <div>
-        //                             <h3 className='font-bold text-lg'>Email</h3>
-        //                         </div>
-        //                         <div className="row flex gap-4">
-        //                             <div className="icon">📧</div>
-        //                             <div className='flex flex-col gap-2'>
-        //                                 <a href="mailto:iyubrajpoudel@gmail.com" className='text-gray-600'>iyubrajpoudel@gmail.com</a>
-        //                                 <a href="mailto:imyubraz@gmail.com" className='text-gray-600'>imyubraz@gmail.com</a>
-        //                             </div>
-        //                         </div>
-        //                     </div>
-        //                     <div className="row flex flex-col gap-4">
-        //                         <div>
-        //                             <h3 className='font-bold text-lg'>Stay Tuned</h3>
-        //                         </div>
-        //                         <div>
-        //                             <SocialLinks fb={`iyubrajpoudel`} insta={`iyubrajpoudel`} linkedin={`iyubrajpoudel`} />
-        //                         </div>
-        //                     </div>
-        //                 </div>
-        //             </div>
-        //             <div className="col lg:grow bg-blue-50 p-2 md:p-8 order-1 md:order-2">
-        //                 <div className='row text-center md:text-left'>
-        //                     <h2 className='text-2xl md:text-3xl font-bold text-purple-900'>Let's Connect</h2>
-        //                     <p className='text-lg text-gray-600'>Integer at lorem eget diam facilisis lacinia ac id massa.</p>
-        //                 </div>
-        //                 <div className="form-wrapper mt-4 py-4">
-        //                     <form action="" onSubmit={(e) => handleSubmit(e)}>
-        //                         <div className='row flex flex-col gap-4'>
-        //                             <div className="row flex flex-col md:flex-row gap-4 md:gap-8">
-        //                                 <input type="text" name="name" id="nameInput" placeholder='Your Name' className='md:w-1/2 outline-blue-200 py-4 px-8 rounded-md' value={formData.name} onChange={(e) => handleChange(e)} required />
-        //                                 <input type="email" name="email" id="emailInput" placeholder='Your Email' className='md:w-1/2 outline-blue-200 py-4 px-8 rounded-md' value={formData.email} onChange={(e) => handleChange(e)} required />
-        //                             </div>
-        //                             <div className="row">
-        //                                 <input type="text" name="subject" id="subjectInput" placeholder='Subject' className='w-full outline-blue-200 py-4 px-8 rounded-md' value={formData.subject} onChange={(e) => handleChange(e)} required />
-        //                             </div>
-        //                             <div className="row">
-        //                                 <textarea name="message" id="messageInput" rows="8" placeholder='How can we help?' className='w-full max-h-[20rem] outline-blue-200 py-4 px-8 rounded-md' onChange={(e) => handleChange(e)} required>{formData.message}</textarea>
-        //                             </div>
-        //                             <div className="row">
-        //                                 <button type="submit" className='bg-purple-800 hover:bg-purple-900 text-white font-semibold px-6 py-3 rounded-full'>Send Message</button>
-        //                             </div>
-        //                         </div>
-        //                     </form>
-        //                 </div>
-        //             </div>
-        //         </div>
-        //     </div>
-        // </div>
-    )
-}
-
-export default ContactUsPage
+export default ContactUsPage;

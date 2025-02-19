@@ -8,33 +8,33 @@ export const useUserStore = create(
     (set, get) => ({
       user: null,
       loading: false,
-      checkingAuth: true,
+      checkingAuth: false,
 
       signup: async ({ name, email, password, confirmPassword }) => {
+        if (password !== confirmPassword) return toast.error("Passwords do not match");
+
         set({ loading: true });
-
-        if (password !== confirmPassword) {
-          set({ loading: false });
-          return toast.error("Passwords do not match");
-        }
-
         try {
-          const res = await axios.post("/auth/signup", { name, email, password });
-          set({ user: res.data, loading: false });
+          const { data } = await axios.post("/auth/signup", { name, email, password });
+          set({ user: data });
+          toast.success("Signup successful");
         } catch (error) {
+          toast.error(error.response?.data?.message || "Signup failed");
+        } finally {
           set({ loading: false });
-          toast.error(error.response?.data?.message || "An error occurred");
         }
       },
 
       login: async (email, password) => {
         set({ loading: true });
         try {
-          const res = await axios.post("/auth/login", { email, password });
-          set({ user: res.data, loading: false });
+          const { data } = await axios.post("/auth/login", { email, password });
+          set({ user: data });
+          toast.success("Login successful");
         } catch (error) {
+          toast.error(error.response?.data?.message || "Login failed");
+        } finally {
           set({ loading: false });
-          toast.error(error.response?.data?.message || "An error occurred");
         }
       },
 
@@ -42,88 +42,78 @@ export const useUserStore = create(
         try {
           await axios.post("/auth/logout");
           set({ user: null });
-          window.location.href = "/login"; // Redirect to login page after logout
+          toast.success("Logged out successfully");
+          window.location.href = "/login";
         } catch (error) {
-          toast.error(error.response?.data?.message || "An error occurred during logout");
+          toast.error(error.response?.data?.message || "Logout failed");
         }
       },
 
       checkAuth: async () => {
         set({ checkingAuth: true });
         try {
-          const response = await axios.get("/auth/profile");
-          set({ user: response.data, checkingAuth: false });
-        } catch (error) {
-          console.log(error.message);
-          set({ checkingAuth: false, user: null });
+          const { data } = await axios.get("/auth/profile");
+          set({ user: data });
+        } catch {
+          set({ user: null });
+        } finally {
+          set({ checkingAuth: false });
         }
       },
-    
-      
 
       resetPassword: async (email) => {
         try {
           await axios.post("/auth/reset-password", { email });
-          toast.success("Password reset link sent to your email.");
+          toast.success("Password reset link sent");
         } catch (error) {
-          toast.error(error.response?.data?.message || "An error occurred");
+          toast.error(error.response?.data?.message || "Reset failed");
         }
       },
 
       refreshToken: async () => {
-        console.log("Refreshing token...");
         if (get().checkingAuth) return;
+
         set({ checkingAuth: true });
         try {
-            const response = await axios.post("/auth/refreshtoken");
-            console.log("New access token:", response.data);
-            set({ checkingAuth: false });
-            return response.data;
+          const { data } = await axios.post("/auth/refreshtoken");
+          return data;
         } catch (error) {
-            console.error("Refresh token failed:", error);
-            set({ user: null, checkingAuth: false });
-            throw error;
+          set({ user: null });
+          throw error;
+        } finally {
+          set({ checkingAuth: false });
         }
-    },
-    
+      },
     }),
     {
-      name: "user", // LocalStorage key
-      getStorage: () => localStorage, // Use localStorage (or sessionStorage if preferred)
-      partialize: (state) => ({ user: state.user }), // Persist only the 'user' field
+      name: "user",
+      getStorage: () => localStorage,
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );
 
 // Axios interceptor for token refresh
 let refreshPromise = null;
-
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // If a refresh is already in progress, wait for it to complete
-        if (refreshPromise) {
-          await refreshPromise;
-          return axios(originalRequest);
-        }
-
-        // Start a new refresh process
-        refreshPromise = useUserStore.getState().refreshToken();
+        if (!refreshPromise) refreshPromise = useUserStore.getState().refreshToken();
         await refreshPromise;
         refreshPromise = null;
 
         return axios(originalRequest);
-      } catch (refreshError) {
-        // If refresh fails, redirect to login or handle as needed
+      } catch {
         useUserStore.getState().logout();
-        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );

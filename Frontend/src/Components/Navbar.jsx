@@ -39,9 +39,8 @@ const Navbar = () => {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
-console.log(user)
   return (
-    <nav className="bg-blue-600 shadow-lg fixed w-full z-10">
+    <nav className="bg-blue-600 shadow-lg fixed w-full z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo Section */}
@@ -71,16 +70,22 @@ console.log(user)
                 : "hidden"
             } md:flex md:items-center md:space-x-8`}
           >
-            {["Home", "About", "Services", "Blog", "Contact"].map((item) => (
-              <Link
-                key={item}
-                to={item === "Home" ? "/" : `/${item.toLowerCase()}`} // Condition for Home
-                className="text-white text-sm font-medium hover:text-blue-200 transition duration-200 py-2 px-4 md:rounded-lg hover:bg-blue-500/10"
-                onClick={() => setMenuOpen(false)}
-              >
-                {item}
-              </Link>
-            ))}
+           {["Home", "About", "Services", "Blog", "Contact"].map((item) => (
+  <Link
+    key={item}
+    to={item === "Home" 
+      ? "/" 
+      : item === "Dashboard" 
+      ? user 
+        ? "/dashboard" 
+        : "#" // Add a fallback for Dashboard when user doesn't exist
+      : `/${item.toLowerCase()}`}
+    className="text-white text-sm font-medium hover:text-blue-200 transition duration-200 py-2 px-4 md:rounded-lg hover:bg-blue-500/10"
+    onClick={() => setMenuOpen(false)}
+  >
+    {item}
+  </Link>
+))}
           </div>
 
           {/* User Profile & Authentication */}

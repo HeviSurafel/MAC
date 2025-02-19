@@ -79,7 +79,7 @@ const CourseManagement = () => {
       courseCode: "",
     });
   };
-
+console.log(instructor)
   const saveCourse = async () => {
     const courseToSave = editingCourse ? editingCourse : { ...newCourse };
     if (!courseToSave._id) {

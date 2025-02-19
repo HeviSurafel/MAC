@@ -39,7 +39,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/contact" element={<ContactUsPage />} />
           <Route path="/about" element={<AboutUsPage />} />
-          <Route path="/service" element={<ServicePage />} />
+          <Route path="/services" element={<ServicePage />} />
           {user ? (
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardOverview />} />

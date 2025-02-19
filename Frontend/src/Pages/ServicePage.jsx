@@ -87,38 +87,6 @@ const ServicePage = () => {
         </div>
       </section>
 
-      {/* Feature Highlights */}
-      <section className="py-20 text-center px-6 bg-indigo-600 text-white">
-        <h2 className="text-3xl font-bold mb-6">Why Choose Us</h2>
-        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          
-          {/* Feature 1 */}
-          <div className="bg-indigo-700 p-8 rounded-lg shadow-xl transform transition duration-300 hover:scale-105 hover:shadow-2xl">
-            <h3 className="text-xl font-semibold mb-4">Expertise</h3>
-            <p>With years of industry experience, we bring unmatched expertise to every project.</p>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="bg-indigo-700 p-8 rounded-lg shadow-xl transform transition duration-300 hover:scale-105 hover:shadow-2xl">
-            <h3 className="text-xl font-semibold mb-4">Innovation</h3>
-            <p>We harness the latest technologies to drive innovation and stay ahead of the curve.</p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="bg-indigo-700 p-8 rounded-lg shadow-xl transform transition duration-300 hover:scale-105 hover:shadow-2xl">
-            <h3 className="text-xl font-semibold mb-4">Reliability</h3>
-            <p>Our clients trust us to deliver high-quality solutions on time and on budget.</p>
-          </div>
-
-          {/* Feature 4 */}
-          <div className="bg-indigo-700 p-8 rounded-lg shadow-xl transform transition duration-300 hover:scale-105 hover:shadow-2xl">
-            <h3 className="text-xl font-semibold mb-4">24/7 Support</h3>
-            <p>Our dedicated support team is available anytime to ensure your needs are met.</p>
-          </div>
-
-        </div>
-      </section>
-
       {/* Call to Action Section */}
       <section className="py-20 text-center bg-teal-600 text-white">
         <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
