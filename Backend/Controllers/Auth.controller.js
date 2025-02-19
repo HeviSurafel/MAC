@@ -172,7 +172,7 @@ const requestPasswordReset = async (req, res) => {
     const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
     const mailOptions = {
       to: user.email,
-      from: process.env.EMAIL_USER,
+      from: "surafelwondu47@gmail.com",
       subject: 'Password Reset Request',
       text: `You are receiving this because you (or someone else) have requested a password reset for your account.\n\n
         Please click on the following link, or paste it into your browser to complete the process:\n\n

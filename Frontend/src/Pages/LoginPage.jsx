@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {useUserStore} from "../Store/useAuthStore"
-import { useNavigate } from 'react-router-dom';
+import { useNavigate,Link } from 'react-router-dom';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -59,10 +59,10 @@ const LoginPage = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
         <div className="mt-6 text-center">
-          <span className="text-sm text-blue-600">Don't have an account? </span>
-          <a href="#" className="text-sm text-green-600 hover:underline">
-            Sign up
-          </a>
+          <span className="text-sm text-blue-600">Forget Password </span>
+          <Link to={"/reset-password"} className="text-sm text-green-600 hover:underline">
+           Reset Password
+          </Link>
         </div>
       </form>
     </div>

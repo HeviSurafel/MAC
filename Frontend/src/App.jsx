@@ -19,6 +19,7 @@ import SettingsPage from "./Pages/SettingsPage";
 import ProtectedRoute from "./ProtectedRoute";
 import LoadingSpinner from "./Components/LoadingSpinner";
 import CourseManagement from "./Dashboard/Admin/CourseManagement"
+import ResetPassword from "./Pages/ResetPassword";
 // Define roles
 const ROLES = {
   ADMIN: "admin",
@@ -42,6 +43,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/contact" element={<ContactUsPage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/service" element={<ServicePage />} />

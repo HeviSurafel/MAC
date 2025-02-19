@@ -13,61 +13,76 @@ const AdminController = {
         email,
         password,
         role,
+        status,
         dateOfBirth,
         address,
         phoneNumber,
         emergencyContact,
-        course,
+        courses, // This should be an array of course IDs
         department,
       } = req.body;
 
       // Step 1: Create the user document
-      const user = new User({ firstName, lastName, email, password, role });
+      const user = new User({
+        firstName,
+        lastName,
+        email,
+        password,
+        role,
+        status, // Ensure we include the user's status
+        dateOfBirth,
+        address,
+        phoneNumber,
+      });
       await user.save();
 
       let studentRegistration = null;
       let instructor = null;
 
-      // Step 2: Create the student registration document if the role is student
+      // Step 2: If the role is student, link to multiple courses
       if (role === "student") {
         studentRegistration = new StudentRegistration({
           student: user._id, // Linking to the created user
-          dateOfBirth,
-          address,
-          phoneNumber,
-          emergencyContact,
-          course, // Linking to the chosen course
+          courses, // Linking to multiple courses
         });
         await studentRegistration.save();
+
+        // Add student to each course's `studentsEnrolled` array
+        for (const courseId of courses) {
+          const course = await Course.findById(courseId);
+          if (course) {
+            course.studentsEnrolled.push(user._id);
+            await course.save();
+          }
+        }
       }
 
-      // Step 3: Create the instructor document if the role is instructor
+      // Step 3: If the role is instructor, link to multiple courses
       if (role === "instructor") {
         instructor = new Instructor({
-          user: user._id, // Linking to the created user
+          user: user._id,
           department,
-          coursesTaught: course ? [course] : [], // Assign course(s) if provided
+          coursesTaught: courses, // Linking to multiple courses
         });
         await instructor.save();
+
+        // Add instructor to each course's `instructors` array
+        for (const courseId of courses) {
+          const course = await Course.findById(courseId);
+          if (course) {
+            course.instructors.push(instructor._id);
+            await course.save();
+          }
+        }
       }
 
-      // Return the response based on the role
       const response = { user };
-
-      if (role === "student") {
-        response.studentRegistration = studentRegistration;
-      }
-
-      if (role === "instructor") {
-        response.instructor = instructor;
-      }
 
       res.status(201).json(response);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   },
-
   // Get all users
   async getAllUsers(req, res) {
     try {
@@ -152,42 +167,43 @@ const AdminController = {
         status,
         courseCode,
       } = req.body;
-  
+
       // Ensure instructorName is provided and is a string
       if (!instructorName || typeof instructorName !== "string") {
-        return res.status(400).json({ message: "Instructor name must be a valid string" });
+        return res
+          .status(400)
+          .json({ message: "Instructor name must be a valid string" });
       }
-  
+
       // Find the instructor by user's firstName (case insensitive)
-      const instructor = await Instructor.findOne()
-        .populate({
-          path: "user",
-          match: { firstName: new RegExp(instructorName, "i") }, // Case-insensitive search
-        });
-  
+      const instructor = await Instructor.findOne().populate({
+        path: "user",
+        match: { firstName: new RegExp(instructorName, "i") }, // Case-insensitive search
+      });
+
       // Check if an instructor was found
       if (!instructor || !instructor.user) {
         return res.status(400).json({ message: "Instructor not found" });
       }
-  
+
       // Create the course with the instructor's ID
       const course = new Course({
-        courseName:title,
-        courseCode:courseCode,
-        description:description,
+        courseName: title,
+        courseCode: courseCode,
+        description: description,
         status,
         instructors: [instructor._id], // Store instructor ID
       });
-  
+
       await course.save();
-  
+
       res.status(201).json({ message: "Course created successfully", course });
     } catch (error) {
       console.error("Create Course Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   },
-  
+
   // Get all courses
   async getAllCourses(req, res) {
     try {
@@ -200,13 +216,12 @@ const AdminController = {
           },
         })
         .populate("studentsEnrolled"); // No need to populate "user" directly
-    
+
       res.status(200).json(courses);
     } catch (error) {
       console.error("Get All Courses Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
-    
   },
 
   // Get a course by ID
@@ -306,11 +321,9 @@ const AdminController = {
       });
     } catch (error) {
       console.error("Error creating instructor:", error);
-      res
-        .status(500)
-        .json({
-          message: "Something went wrong while creating the instructor.",
-        });
+      res.status(500).json({
+        message: "Something went wrong while creating the instructor.",
+      });
     }
   },
   async getAllInstructors(req, res) {
@@ -336,7 +349,9 @@ const AdminController = {
       console.error("Error deleting instructor:", error);
       res
         .status(500)
-        .json({ message: "Something went wrong while deleting the instructor." });
+        .json({
+          message: "Something went wrong while deleting the instructor.",
+        });
     }
   },
 };

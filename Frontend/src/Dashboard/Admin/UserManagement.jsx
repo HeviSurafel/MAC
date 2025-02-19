@@ -63,13 +63,16 @@ const UserManagement = () => {
 
       {isModalOpen && (
         <UserModal
+          isModalOpen={isModalOpen} // Pass the isModalOpen prop
           formData={formData}
           setFormData={setFormData}
+          createUser={createUser}
           setIsModalOpen={setIsModalOpen}
           createUserNewUser={createUserNewUser}
         />
       )}
-     <UserTable users={users} handleDeleteUser={handleDeleteUser} />
+
+      <UserTable users={users} handleDeleteUser={handleDeleteUser} />
     </div>
   );
 };

@@ -56,7 +56,14 @@ export const useUserStore = create((set, get) => ({
 	}
   }
 ,  
-
+resetPassword: async (email) => {
+  try {
+    await axios.post("/auth/reset-password", { email });
+    toast.success("Password reset link sent to your email.");
+  } catch (error) {
+    toast.error(error.response?.data?.message || "An error occurred");
+  }
+},
   refreshToken: async () => {
     if (get().checkingAuth) return;
 

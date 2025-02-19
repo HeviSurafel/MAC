@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaBars, FaTimes, FaCaretDown } from "react-icons/fa";
 import logo from "../assets/image01.jpg";
-import {useUserStore } from "../Store/useAuthStore";
+import { useUserStore } from "../Store/useAuthStore";
 
 const Navbar = () => {
   const { user, logout } = useUserStore();
@@ -62,7 +62,7 @@ const Navbar = () => {
             {["Home", "About", "Services", "Blog", "Contact"].map((item) => (
               <Link
                 key={item}
-                to={`/${item.toLowerCase()}`}
+                to={item === "Home" ? "/" : `/${item.toLowerCase()}`} // Condition for Home
                 className="text-white text-sm font-medium hover:text-blue-200 transition duration-200 py-2 px-4 md:rounded-lg hover:bg-blue-500/10"
                 onClick={() => setMenuOpen(false)}
               >

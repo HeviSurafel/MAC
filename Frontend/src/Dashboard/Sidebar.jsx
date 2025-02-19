@@ -24,7 +24,7 @@ const Sidebar = () => {
   const filteredLinks = Adminlinks.filter(link => link.roles?.includes(user?.role));
 
   return (
-    <div className="w-64 bg-gray-800 text-white fixed top-0 left-0 h-screen flex flex-col">
+    <div className="w-64 bg-gray-800 text-white fixed top-16 left-0 h-screen flex flex-col">
       {/* Logo and Title */}
       <div className="p-6">
         <h1 className="text-2xl font-bold">Makalla Academy</h1>

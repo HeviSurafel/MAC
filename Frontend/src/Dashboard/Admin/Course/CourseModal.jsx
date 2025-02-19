@@ -74,8 +74,8 @@ const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, c
             >
               <option value="">Select Instructor</option>
               {instructors.map((inst) => (
-                <option key={inst._id} value={inst.user.firstName}>
-                  {inst.user.firstName}
+                <option key={inst._id} value={inst.user?.firstName}>
+                  {inst.user?.firstName}
                 </option>
               ))}
             </select>
