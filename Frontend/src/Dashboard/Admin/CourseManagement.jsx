@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { FaSearch, FaPlus } from "react-icons/fa";
-import useUserStore from "../../Store/AdminStore";
+import useAdminStore from "../../Store/AdminStore";
 import CourseCard from "./Course/CourseCard";
 import CourseModal from "./Course/CourseModal";
-
+import useUserStore from "../../Store/useAuthStore";
 const generateCourseCode = () => {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -15,7 +15,8 @@ const generateCourseCode = () => {
 };
 
 const CourseManagement = () => {
-  const { instructor, deleteCourse, updateCourse, courses, getCourses, createCourse, getAllInstructors } = useUserStore();
+  const{user}=useUserStore();
+  const { instructor, deleteCourse, updateCourse, courses, getCourses, createCourse, getAllInstructors } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCourse, setEditingCourse] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,7 +80,6 @@ const CourseManagement = () => {
       courseCode: "",
     });
   };
-console.log(instructor)
   const saveCourse = async () => {
     const courseToSave = editingCourse ? editingCourse : { ...newCourse };
     if (!courseToSave._id) {
@@ -119,12 +119,15 @@ console.log(instructor)
             />
             <FaSearch className="absolute left-3 top-3 text-gray-400" />
           </div>
-          <button
-            onClick={openAddModal}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 flex items-center"
-          >
-            <FaPlus className="mr-2" /> Add Course
-          </button>
+          {user?.role === "admin" && (
+            <button
+              onClick={openAddModal}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 flex items-center"
+            >
+              <FaPlus className="mr-2" /> Add Course
+            </button>
+          )}
+          
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

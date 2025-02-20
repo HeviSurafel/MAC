@@ -39,27 +39,6 @@ const FeedbackPage = () => {
 
         {/* Feedback Form */}
         <form onSubmit={handleFormSubmit}>
-          {/* Rating Section */}
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Rate Your Experience
-            </label>
-            <div className="flex space-x-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setFeedback({ ...feedback, rating: star })}
-                  className={`${
-                    feedback.rating >= star ? "text-yellow-500" : "text-gray-400"
-                  } text-2xl`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Comments Section */}
           <div className="mb-6">
             <label className="block text-gray-700 text-sm font-medium mb-2">

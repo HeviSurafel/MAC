@@ -1,83 +1,86 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import useInstructorStore from "../Store/Instractor.Store";
+import { useUserStore } from "../Store/useAuthStore";
 
 const AssessmentManagement = () => {
-  // Sample assessment data with student names, course, and results
-  const [assessments, setAssessments] = useState([
-    {
-      id: 1,
-      studentName: "Surafel wondu",
-      courseName: "Web Development",
-      assignmentResult: 85,
-      examResult: 90,
-      finalExamResult: 88,
-      grade: "",
-    },
-    {
-        id: 1,
-        studentName: "Surafel wondu",
-        courseName: "Web Development",
-        assignmentResult: 85,
-        examResult: 90,
-        finalExamResult: 88,
-        grade: "",
-      },
-      {
-        id: 1,
-        studentName: "Surafel wondu",
-        courseName: "Web Development",
-        assignmentResult: 85,
-        examResult: 90,
-        finalExamResult: 88,
-        grade: "",
-      },
-  ]);
-
-  const [isTeacher, setIsTeacher] = useState(true); // Flag to indicate if user is a teacher
+  const { user } = useUserStore(); // Get the logged-in user (instructor)
+  const { courses, fetchCourseAssessments, courseAssessments, fetchInstructorCourses,fetchCourseStudents, courseStudents, updateAssessment } = useInstructorStore(); // Store actions and data
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
 
-  // Calculate the grade based on assignment, exam, and final exam results
-  const calculateGrade = (assessment) => {
-    const total =
-      (assessment.assignmentResult || 0) +
-      (assessment.examResult || 0) +
-      (assessment.finalExamResult || 0);
-    const average = total / 3;
+  useEffect(() => {
+    if (user?.role === "instructor") {
+      setIsTeacher(true);
+    }
 
-    if (average >= 90) return "A";
-    if (average >= 80) return "B";
-    if (average >= 70) return "C";
-    if (average >= 60) return "D";
-    return "F";
-  };
+    // Fetch instructor's courses when the component mounts
+    if (user?.id) {
+      fetchInstructorCourses(user?.id); // Assuming user has an id property
+    }
+  }, [user]);
 
-  // Open modal for adding/updating marks
+  useEffect(() => {
+    if (selectedCourse) {
+      // Fetch students for the selected course
+      fetchCourseStudents(selectedCourse);
+    }
+  }, [selectedCourse]);
+
   const openEditModal = (assessment) => {
     setEditingAssessment(assessment);
     setIsEditModalOpen(true);
   };
 
-  // Close modal
   const closeEditModal = () => {
     setEditingAssessment(null);
     setIsEditModalOpen(false);
   };
 
-  // Save edited marks
   const saveEditedMarks = (updatedAssessment) => {
-    updatedAssessment.grade = calculateGrade(updatedAssessment);
-    setAssessments(
-      assessments.map((assessment) =>
-        assessment.id === updatedAssessment.id ? updatedAssessment : assessment
-      )
-    );
-    closeEditModal();
+    // updatedAssessment.grade = calculateGrade(updatedAssessment);
+    // updateAssessment(updatedAssessment);
+    // closeEditModal();
   };
 
+  const handleCourseChange = (e) => {
+    const courseId = e.target.value;
+    setSelectedCourse(courseId);
+    fetchCourseAssessments(courseId); // Fetch assessments for the selected course
+  };
+  console.log(courses)
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: Mr. Mikael Tesfaye</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: {user?.name}</h1>
+
+      {/* Course Dropdown */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+        <select
+          value={selectedCourse || ""}
+          onChange={handleCourseChange}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select a course</option>
+          {courses.map((course) => (
+            <option key={course.id} value={course.id}>
+              {course.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Students List */}
+      <div className="mb-6">
+        <h3 className="text-xl font-bold">Students in the course</h3>
+        <ul>
+          {courseStudents.map((student) => (
+            <li key={student.id}>{student.name}</li>
+          ))}
+        </ul>
+      </div>
 
       {/* Assessment Table */}
       <table className="min-w-full table-auto bg-white rounded-lg shadow-lg">
@@ -95,38 +98,28 @@ const AssessmentManagement = () => {
           </tr>
         </thead>
         <tbody>
-          {assessments.map((assessment) => (
+          {courseAssessments.map((assessment) => (
             <tr key={assessment.id} className="border-b hover:bg-gray-100">
               <td className="px-6 py-4 text-sm font-medium text-gray-700">{assessment.studentName}</td>
               <td className="px-6 py-4 text-sm font-medium text-gray-700">{assessment.courseName}</td>
               <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.assignmentResult !== null
-                  ? assessment.assignmentResult
-                  : "Not Assigned Yet"}
+                {assessment.assignmentResult || "Not Assigned Yet"}
               </td>
               <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.examResult !== null ? assessment.examResult : "Not Assigned Yet"}
+                {assessment.examResult || "Not Assigned Yet"}
               </td>
               <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.finalExamResult !== null
-                  ? assessment.finalExamResult
-                  : "Not Assigned Yet"}
+                {assessment.finalExamResult || "Not Assigned Yet"}
               </td>
               <td className="px-6 py-4 text-sm font-medium text-gray-700">
                 {assessment.grade || "Not Graded Yet"}
               </td>
               {isTeacher && (
                 <td className="px-6 py-4 text-sm font-medium">
-                  <button
-                    className="text-blue-500 hover:text-blue-700 mr-4"
-                    onClick={() => openEditModal(assessment)}
-                  >
+                  <button className="text-blue-500 hover:text-blue-700 mr-4" onClick={() => openEditModal(assessment)}>
                     <FaEdit />
                   </button>
-                  <button
-                    className="text-red-500 hover:text-red-700"
-                    onClick={() => {} /* Handle delete */}
-                  >
+                  <button className="text-red-500 hover:text-red-700" onClick={() => {}}>
                     <FaTrash />
                   </button>
                 </td>
@@ -160,7 +153,7 @@ const AssessmentManagement = () => {
                       assignmentResult: e.target.value,
                     })
                   }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -176,7 +169,7 @@ const AssessmentManagement = () => {
                       examResult: e.target.value,
                     })
                   }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -192,23 +185,20 @@ const AssessmentManagement = () => {
                       finalExamResult: e.target.value,
                     })
                   }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition duration-200"
+                  className="mr-4 py-2 px-4 bg-gray-200 text-gray-700 rounded-md"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-200"
-                >
+                <button type="submit" className="py-2 px-6 bg-blue-500 text-white rounded-md">
                   Save
                 </button>
               </div>

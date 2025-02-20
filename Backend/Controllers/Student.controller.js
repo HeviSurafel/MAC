@@ -1,7 +1,7 @@
 const Course = require("../Model/Course.model");
 const QRCode = require("qrcode");
 const Student = require("../Model/Student.model");
-const Assessment = require("../Model/Assesment.model");
+
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
   MATERIALS_NOT_FOUND: "No materials found for this course",
@@ -39,25 +39,32 @@ const getCourseMaterials = async (req, res) => {
   }
 };
 
-// Submit an assessment
+// Submit an assessment (as assessments are now part of the Course model)
 const submitAssessment = async (req, res) => {
   try {
-    const { assessmentId } = req.params;
+    const { courseId, assessmentId } = req.params;
     const { fileUrl } = req.body;
 
-    const assessment = await Assessment.findById(assessmentId);
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
+    }
+
+    const assessment = course.assessments.id(assessmentId);
     if (!assessment) {
       return res.status(404).json({ message: ERROR_MESSAGES.ASSESSMENT_NOT_FOUND });
     }
 
+    // Create the submission object
     const studentSubmission = {
       student: req.user._id,
       fileUrl,
       submittedAt: Date.now(),
     };
 
+    // Push the submission to the specific assessment
     assessment.studentSubmissions.push(studentSubmission);
-    await assessment.save();
+    await course.save();
 
     res.status(201).json({ message: ERROR_MESSAGES.ASSESSMENT_SUBMITTED, assessment });
   } catch (error) {
@@ -70,19 +77,23 @@ const submitAssessment = async (req, res) => {
 const viewGrades = async (req, res) => {
   try {
     const studentId = req.user._id;
-    const assessments = await Assessment.find({
-      "studentSubmissions.student": studentId,
-    }).select("title studentSubmissions");
 
-    const grades = assessments.map((assessment) => {
-      const submission = assessment.studentSubmissions.find(
-        (sub) => sub.student.toString() === studentId
-      );
-      return {
-        assessmentTitle: assessment.title,
-        score: submission ? submission.score : "Not graded yet",
-      };
+    const courses = await Course.find({
+      studentsEnrolled: studentId,
     });
+
+    const grades = courses.flatMap((course) =>
+      course.assessments.map((assessment) => {
+        const submission = assessment.studentSubmissions.find(
+          (sub) => sub.student.toString() === studentId
+        );
+        return {
+          courseName: course.courseName,
+          assessmentTitle: assessment.title,
+          score: submission ? submission.score : "Not graded yet",
+        };
+      })
+    );
 
     res.status(200).json(grades);
   } catch (error) {
@@ -90,6 +101,8 @@ const viewGrades = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+// Generate certificate QR code
 const certificate = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -123,10 +136,11 @@ const certificate = async (req, res) => {
     res.status(500).json({ message: "Error generating certificate QR code" });
   }
 };
+
 module.exports = {
   getStudentCourses,
   getCourseMaterials,
   submitAssessment,
   viewGrades,
-  certificate
+  certificate,
 };

@@ -1,135 +1,138 @@
 import { create } from "zustand";
-import axios from "../lib/axios"; // Use the Axios instance
+import axios from "../lib/axios";
 import { toast } from "react-hot-toast";
-const useUserStore = create((set, get) => ({
-    users: [],
-    courses: [],
-    instructor: [], // Add this line
-    user: null,
-    loading: false,
-    error: null,
-    setUsers: (users) => set({ users }),
-    setUser: (user) => set({ user }),
-    getAllUsers: async () => {
-        set({ loading: true });
-        try {
-            const res = await axios.get("/users");
-            set({ users: res.data, loading: false });
-        } catch (error) {
-            set({ loading: false, error: error });
-            toast.error("Failed to load users."+error);
-        }
-    },
-    createUser: async (userData) => {
-        console.log(userData);
-        set({ loading: true });
-        try {
-            const res = await axios.post("/users", userData); // Endpoint to create user
-            set({ users: [...get().users, res.data], loading: false });
-            toast.success("User created successfully.");
-        } catch (error) {
-            set({ loading: false });
-            toast.error(error.response?.data?.message || "An error occurred");
-        }
-    },
-    deleteUser: async (userId) => {
-        try {
-            const res = await axios.delete(`/users/${userId}`); // Endpoint to delete user
-            set({ users: get().users.filter(user => user._id !== userId) });
-            toast.success("User deleted successfully.");
-        } catch (error) {
-            set({ error: error.message });
-            toast.error("Failed to delete user.");
-        }
-    },
-    suspendUser: async (userId) => {
-        try {
-            const res = await axios.put(`/users/suspend/${userId}`); // Endpoint to suspend user
-            set({ users: get().users.map(user => user._id === userId ? { ...user, status: "suspended" } : user) });
-            toast.success("User suspended successfully.");
-        } catch (error) {
-            set({ error: error.message });
-            toast.error("Failed to suspend user.");
-        }
-    },
-    getUserById: async (userId) => {
-        try {
-            const res = await axios.get(`/users/${userId}`); // Endpoint to get a user by ID
-            set({ user: res.data });
-        } catch (error) {
-            set({ error: error.message });
-            toast.error("Failed to fetch user details.");
-        }
-    },
-    createCourse: async (courseData) => {
-        console.log(courseData);
-        try {
-            const res = await axios.post("/courses", courseData); // Endpoint to create course
-           set({courses: [...get().courses, res.data]});
-            toast.success("Course created successfully.");
-        } catch (error) {
-            console.log(error);
-            toast.error("Failed to create course.");
-        }
-    },
-    getCourses: async () => {
-        try {
-            const res = await axios.get("/courses"); // Endpoint to get all courses
-            set({ courses: res.data });
-        } catch (error) {
-            set({ error: error.message });
-            toast.error("Failed to fetch courses.");
-        }
-    },
-    deleteCourse: async (id) => {   
-        try {
-            const res = await axios.delete(`/courses/${id}`); // Endpoint to delete course
-            set({ courses: get().courses.filter(course => course._id !== id) });
-            toast.success("Course deleted successfully.");
-        } catch (error) {
-            console.log(error);
-            toast.error("Failed to delete course.");
-        }
-    },
-    updateCourse: async (id, courseData) => {
-        try {
-            const res = await axios.put(`/courses/${id}`, courseData); // Endpoint to update course
-            set({ courses: get().courses.map(course => course._id === id ? res.data : course) });
-            toast.success("Course updated successfully.");
-        } catch (error) {
-            console.log(error);
-            toast.error("Failed to update course.");
-        }
-    },
-    createInstractor: async ({firstName, lastName, email, password, department}) => {
-        try {
-            const res = await axios.post("/instructors", {firstName, lastName, email, password, department}); // Endpoint to create instructor
-            set({instructor: [...get().instructor, res.data]});
-            toast.success("Instructor created successfully.");
-        } catch (error) {
-            console.log(error);
-            toast.error("Failed to create instructor.");
-        }
-    },
-    getAllInstructors: async () => {
-        try {
-            const res = await axios.get("/instructors"); // Endpoint to get all instructors
-            set({ instructor: res.data });
-           
-        } catch (error) {
-            set({ error: error.message });
-            toast.error("Failed to fetch instructors.");
-        }
-    },
-    deleteInstructor: async (id) => {
-        try {
-            const res = await axios.delete(`/instructors/${id}`);
-            set({ instructor: get().instructor.filter(instructor => instructor._id !== id) });
-            toast.success("Instructor deleted successfully.");
-        } catch (error) {
-            console.log(error);
-            toast.error("Failed to delete instructor.");
-        }   }
+
+const useAdminStore = create((set, get) => ({
+  users: [],
+  courses: [],
+  instructors: [],
+  user: null,
+  loading: false,
+  error: null,
+
+  setUsers: (users) => set({ users }),
+  setUser: (user) => set({ user }),
+  setCourses: (courses) => set({ courses }),
+  setInstructors: (instructors) => set({ instructors }),
+
+  handleRequest: async (request, successMessage, errorMessage, callback) => {
+    set({ loading: true });
+    try {
+      const response = await request();
+      set({ loading: false });
+      if (callback) callback(response.data);
+      if (successMessage) toast.success(successMessage);
+      return response.data;
+    } catch (error) {
+      set({ loading: false, error });
+      toast.error(error?.response?.data?.message || errorMessage);
+      throw error;
+    }
+  },
+
+  getAllUsers: () =>
+    get().handleRequest(
+      () => axios.get("/users"),
+      null,
+      "Failed to load users.",
+      (data) => set({ users: data })
+    ),
+
+  createUser: (userData) =>
+    get().handleRequest(
+      () => axios.post("/users", userData),
+      "User created successfully.",
+      "Failed to create user.",
+      (data) => set({ users: [...get().users, data] })
+    ),
+
+  deleteUser: (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    get().handleRequest(
+      () => axios.delete(`/users/${userId}`),
+      "User deleted successfully.",
+      "Failed to delete user.",
+      () => set({ users: get().users.filter((user) => user._id !== userId) })
+    );
+  },
+
+  suspendUser: (userId) =>
+    get().handleRequest(
+      () => axios.put(`/users/suspend/${userId}`),
+      "User suspended successfully.",
+      "Failed to suspend user.",
+      () => set({ users: get().users.map((user) => (user._id === userId ? { ...user, status: "suspended" } : user)) })
+    ),
+
+  getUserById: (userId) =>
+    get().handleRequest(
+      () => axios.get(`/users/${userId}`),
+      null,
+      "Failed to fetch user details.",
+      (data) => set({ user: data })
+    ),
+
+  getCourses: () =>
+    get().handleRequest(
+      () => axios.get("/courses"),
+      null,
+      "Failed to fetch courses.",
+      (data) => set({ courses: data })
+    ),
+
+  createCourse: (courseData) =>
+    get().handleRequest(
+      () => axios.post("/courses", courseData),
+      "Course created successfully.",
+      "Failed to create course.",
+      (data) => set({ courses: [...get().courses, data] })
+    ),
+
+  updateCourse: (id, courseData) => {
+    if (!window.confirm("Are you sure you want to update this course?")) return;
+    get().handleRequest(
+      () => axios.put(`/courses/${id}`, courseData),
+      "Course updated successfully.",
+      "Failed to update course.",
+      (data) => set({ courses: get().courses.map((course) => (course._id === id ? data : course)) })
+    );
+  },
+
+  deleteCourse: (id) => {
+    if (!window.confirm("Are you sure you want to delete this course?")) return;
+    get().handleRequest(
+      () => axios.delete(`/courses/${id}`),
+      "Course deleted successfully.",
+      "Failed to delete course.",
+      () => set({ courses: get().courses.filter((course) => course._id !== id) })
+    );
+  },
+
+  getAllInstructors: () =>
+    get().handleRequest(
+      () => axios.get("/instructors"),
+      null,
+      "Failed to fetch instructors.",
+      (data) => set({ instructors: data })
+    ),
+
+  createInstructor: (instructorData) =>
+    get().handleRequest(
+      () => axios.post("/instructors", instructorData),
+      "Instructor created successfully.",
+      "Failed to create instructor.",
+      (data) => set({ instructors: [...get().instructors, data] })
+    ),
+
+  deleteInstructor: (id) => {
+    if (!window.confirm("Are you sure you want to delete this instructor?")) return;
+    get().handleRequest(
+      () => axios.delete(`/instructors/${id}`),
+      "Instructor deleted successfully.",
+      "Failed to delete instructor.",
+      () => set({ instructors: get().instructors.filter((inst) => inst._id !== id) })
+    );
+  },
 }));
 
-export default useUserStore;
+export default useAdminStore;

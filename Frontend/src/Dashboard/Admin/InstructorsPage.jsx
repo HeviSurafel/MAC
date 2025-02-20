@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { FaTrashAlt, FaEdit, FaEye, FaTimesCircle } from 'react-icons/fa';
-import useUserStore  from "../../Store/AdminStore"; // Import the function to create an instructor
-
+import useAdminStore  from "../../Store/AdminStore"; // Import the function to create an instructor
+import useUserStore from "../../Store/useAuthStore";
 
 // Initial instructors data (could be empty initially)
 const initialInstructors = [];
 
 const InstructorsPage = () => {
-  const {instructor, createInstractor,getAllInstructors ,deleteInstructor} = useUserStore();
+  const {user}=useUserStore();
+  const {instructor, createInstractor,getAllInstructors ,deleteInstructor} = useAdminStore();
   const [instructors, setInstructors] = useState(initialInstructors);
   const [showForm, setShowForm] = useState(false);
   const [newInstructor, setNewInstructor] = useState({
@@ -50,7 +51,6 @@ console.log(instructor)
 };
   // Handle deleting an instructor
   const handleDelete = async(id) => {
-    console.log(id)
     try {
       // Assuming removeInstructor() from store to delete the instructor
      const response = await deleteInstructor(id);
@@ -74,6 +74,7 @@ console.log(instructor)
     const instructor = instructors.find((instructor) => instructor.id === id);
     alert(`Viewing details for ${instructor.name}`);
   };
+  console.log(instructor)
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -82,17 +83,18 @@ console.log(instructor)
           Instructors List
         </h1>
 
-        {/* Create Instructor Button */}
-        <div className="text-right mb-6">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-          >
-            {showForm ? "Cancel" : "Create Instructor"}
-          </button>
-        </div>
-
-        {/* Instructor Form */}
+     {user.role==="admin" &&(
+       <div className="text-right mb-6">
+       <button
+         onClick={() => setShowForm(!showForm)}
+         className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+       >
+         {showForm ? "Cancel" : "Create Instructor"}
+       </button>
+     </div>
+     )  
+    }
+      
         {showForm && (
           <form onSubmit={handleFormSubmit} className="mb-8 bg-white p-6 shadow-lg rounded-lg">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Add New Instructor</h2>
@@ -177,19 +179,21 @@ console.log(instructor)
         <table className="min-w-full table-auto text-left mt-8">
           <thead>
             <tr className="border-b">
-              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Name</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">FirstName</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">LastName</th>
               <th className="px-4 py-2 text-sm font-semibold text-gray-700">Email</th>
               <th className="px-4 py-2 text-sm font-semibold text-gray-700">Department</th>
               <th className="px-4 py-2 text-sm font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {instructor.length===0?"": instructor?.map((instructor) => (
+            {instructor?.length===0?"": instructor?.map((instructor) => (
               <tr key={instructor.id} className="border-b">
                 <td className="px-4 py-2 text-gray-700">{instructor.user?.firstName}</td>
+                <td className="px-4 py-2 text-gray-700">{instructor.user?.lastName}</td>
                 <td className="px-4 py-2 text-gray-700">{instructor.user?.email}</td>
                 <td className="px-4 py-2 text-gray-700">{instructor.department}</td>
-                <td className="px-2 py-2 flex space-x-2">
+                {user?.role==="admin" && (  <td className="px-2 py-2 flex space-x-2">
                   <button
                     onClick={() => handleViewDetails(instructor.id)}
                     className="text-gray-500 hover:text-gray-700 font-bold py-1 px-3 rounded-lg transition duration-200"
@@ -208,7 +212,8 @@ console.log(instructor)
                   >
                     <FaTrashAlt size={16} />
                   </button>
-                </td>
+                </td>)}
+               
               </tr>
             ))}
           </tbody>

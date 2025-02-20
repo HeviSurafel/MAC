@@ -2,12 +2,39 @@ const User = require("../Model/User.model");
 const StudentRegistration = require("../Model/Student.model");
 const Instructor = require("../Model/Instrator.model");
 const Course = require("../Model/Course.model");
-
+const mongoose = require("mongoose");
 const AdminController = {
+  // Create a new user (student or instructor)
   async createUser(req, res) {
+    console.log(req.body);
     try {
-      console.log(req.body);
       const {
+        firstName,
+        lastName,
+        email,
+        password,
+        role = "student",
+        status = "active",
+        dateOfBirth,
+        address,
+        phoneNumber,
+        department,
+        courses = [], // List of course IDs
+        section = '', // Single section value
+      } = req.body;
+  
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already exists." });
+      }
+  
+      // Construct the sectionAssignments array
+      const sectionAssignments = courses.map(courseId => ({
+        course: courseId,
+        section: section, // Assuming you want to assign the same section to all courses
+      }));
+  console.log(sectionAssignments)
+      const user = new User({
         firstName,
         lastName,
         email,
@@ -17,127 +44,123 @@ const AdminController = {
         dateOfBirth,
         address,
         phoneNumber,
-        emergencyContact,
-        courses, // This should be an array of course IDs
         department,
-      } = req.body;
-
-      // Step 1: Create the user document
-      const user = new User({
-        firstName,
-        lastName,
-        email,
-        password,
-        role,
-        status, // Ensure we include the user's status
-        dateOfBirth,
-        address,
-        phoneNumber,
+        sectionAssignments, // Pass the constructed sectionAssignments array
       });
+ 
+     
+  
       await user.save();
-
-      let studentRegistration = null;
-      let instructor = null;
-
-      // Step 2: If the role is student, link to multiple courses
-      if (role === "student") {
-        studentRegistration = new StudentRegistration({
-          student: user._id, // Linking to the created user
-          courses, // Linking to multiple courses
-        });
-        await studentRegistration.save();
-
-        // Add student to each course's `studentsEnrolled` array
-        for (const courseId of courses) {
-          const course = await Course.findById(courseId);
-          if (course) {
-            course.studentsEnrolled.push(user._id);
-            await course.save();
-          }
-        }
-      }
-
-      // Step 3: If the role is instructor, link to multiple courses
+  
+      // Instructor-specific logic
       if (role === "instructor") {
-        instructor = new Instructor({
+        const instructor = new Instructor({
           user: user._id,
           department,
-          coursesTaught: courses, // Linking to multiple courses
+          coursesTaught: sectionAssignments.map((s) => s.course),
         });
         await instructor.save();
-
-        // Add instructor to each course's `instructors` array
-        for (const courseId of courses) {
-          const course = await Course.findById(courseId);
-          if (course) {
-            course.instructors.push(instructor._id);
-            await course.save();
-          }
-        }
+  
+        await Promise.all(
+          sectionAssignments.map(async ({ courseId }) => {
+            const course = await Course.findById(courseId);
+            if (course && !course.instructors.includes(instructor._id)) {
+              course.instructors.push(instructor._id);
+              await course.save();
+            }
+          })
+        );
       }
-
-      const response = { user };
-
-      res.status(201).json(response);
+  
+      // Student-specific logic
+      if (role === "student") {
+        await Promise.all(
+          sectionAssignments.map(async ({ courseId }) => {
+            const course = await Course.findById(courseId);
+            if (course && !course.studentsEnrolled.includes(user._id)) {
+              course.studentsEnrolled.push(user._id);
+              await course.save();
+            }
+          })
+        );
+      }
+  
+      res.status(201).json({ message: "User created successfully", user });
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      console.error("Create User Error:", error);
+      res.status(500).json({ message: error.message });
     }
-  },
+  }
+  
+,  
+
   // Get all users
   async getAllUsers(req, res) {
     try {
-      const users = await User.find({});
+      const users = await User.find();
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
-  // Get a user by ID
+  // Get user by ID
   async getUserById(req, res) {
     try {
       const user = await User.findById(req.params.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.status(200).json(user);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
-  // Update a user
+  // Update user
   async updateUser(req, res) {
     try {
-      const { firstName, lastName, email, role } = req.body;
-      const user = await User.findByIdAndUpdate(
+      const updatedUser = await User.findByIdAndUpdate(
         req.params.id,
-        { firstName, lastName, email, role },
+        req.body,
         { new: true }
       );
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.status(200).json(user);
+
+      if (!updatedUser) return res.status(404).json({ message: "User not found" });
+      res.status(200).json({ message: "User updated successfully", updatedUser });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   },
 
-  // Delete a user
+  // Delete user
   async deleteUser(req, res) {
     try {
-      const user = await User.findByIdAndDelete(req.params.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (user.role === "student") {
+        await Course.updateMany(
+          { studentsEnrolled: user._id },
+          { $pull: { studentsEnrolled: user._id } }
+        );
       }
+
+      if (user.role === "instructor") {
+        await Instructor.deleteOne({ user: user._id });
+        await Course.updateMany(
+          { instructors: user._id },
+          { $pull: { instructors: user._id } }
+        );
+      }
+
+      await user.deleteOne();
       res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
+      console.error("Delete User Error:", error);
       res.status(500).json({ message: error.message });
     }
   },
 
-  // Suspend a user
+  // Suspend user
   async suspendUser(req, res) {
     try {
       const user = await User.findByIdAndUpdate(
@@ -145,9 +168,7 @@ const AdminController = {
         { status: "suspended" },
         { new: true }
       );
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.status(200).json({ message: "User suspended successfully", user });
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -155,48 +176,28 @@ const AdminController = {
   },
 
   // Create a new course
-
   async createCourse(req, res) {
-    console.log(req.body);
     try {
-      const {
-        title,
-        description,
-        subDescription,
-        instructorName,
-        status,
-        courseCode,
-      } = req.body;
+      const { title, courseCode, description, instructorName, status } = req.body;
 
-      // Ensure instructorName is provided and is a string
-      if (!instructorName || typeof instructorName !== "string") {
-        return res
-          .status(400)
-          .json({ message: "Instructor name must be a valid string" });
-      }
-
-      // Find the instructor by user's firstName (case insensitive)
       const instructor = await Instructor.findOne().populate({
         path: "user",
-        match: { firstName: new RegExp(instructorName, "i") }, // Case-insensitive search
+        match: { firstName: new RegExp(instructorName, "i") },
       });
 
-      // Check if an instructor was found
-      if (!instructor || !instructor.user) {
+      if (!instructor) {
         return res.status(400).json({ message: "Instructor not found" });
       }
 
-      // Create the course with the instructor's ID
       const course = new Course({
         courseName: title,
-        courseCode: courseCode,
-        description: description,
+        courseCode,
+        description,
         status,
-        instructors: [instructor._id], // Store instructor ID
+        instructors: [instructor._id],
       });
 
       await course.save();
-
       res.status(201).json({ message: "Course created successfully", course });
     } catch (error) {
       console.error("Create Course Error:", error);
@@ -208,150 +209,88 @@ const AdminController = {
   async getAllCourses(req, res) {
     try {
       const courses = await Course.find()
-        .populate({
-          path: "instructors",
-          populate: {
-            path: "user", // This will get the user data inside instructors
-            select: "firstName lastName email", // Only fetch necessary fields
-          },
-        })
-        .populate("studentsEnrolled"); // No need to populate "user" directly
+        .populate({ path: "instructors", populate: { path: "user", select: "firstName lastName email" } })
+        .populate("studentsEnrolled");
 
       res.status(200).json(courses);
     } catch (error) {
-      console.error("Get All Courses Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   },
 
-  // Get a course by ID
+  // Get course by ID
   async getCourseById(req, res) {
     try {
-      const { id } = req.params;
-      const course = await Course.findById(id)
-        .populate("academicDirector")
+      const course = await Course.findById(req.params.id)
         .populate("instructors")
         .populate("studentsEnrolled");
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+      if (!course) return res.status(404).json({ message: "Course not found" });
       res.status(200).json(course);
     } catch (error) {
-      console.error("Get Course By ID Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   },
 
-  // Update a course
+  // Update course
   async updateCourse(req, res) {
     try {
-      const { id } = req.params;
-      const {
-        courseName,
-        courseCode,
-        description,
-        academicDirector,
-        instructors,
-      } = req.body;
-
-      const course = await Course.findByIdAndUpdate(
-        id,
-        { courseName, courseCode, description, academicDirector, instructors },
-        { new: true }
-      );
-
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-
+      const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!course) return res.status(404).json({ message: "Course not found" });
       res.status(200).json({ message: "Course updated successfully", course });
     } catch (error) {
-      console.error("Update Course Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   },
 
-  // Delete a course
+  // Delete course
   async deleteCourse(req, res) {
     try {
-      const { id } = req.params;
-      const course = await Course.findByIdAndDelete(id);
-
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-
+      const course = await Course.findByIdAndDelete(req.params.id);
+      if (!course) return res.status(404).json({ message: "Course not found" });
       res.status(200).json({ message: "Course deleted successfully" });
     } catch (error) {
-      console.error("Delete Course Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   },
+
+  // Create instructor
   async createInstructor(req, res) {
     try {
       const { firstName, lastName, email, password, department } = req.body;
+
       const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already exists." });
-      }
+      if (existingUser) return res.status(400).json({ message: "Email already exists." });
 
-      const newUser = new User({
-        firstName,
-        lastName,
-        email,
-        password,
-        role: "instructor", // Set the role as 'instructor'
-      });
+      const user = new User({ firstName, lastName, email, password, role: "instructor", department });
+      await user.save();
 
-      // Save the User document
-      await newUser.save();
+      const instructor = new Instructor({ user: user._id, department });
+      await instructor.save();
 
-      // Create a new Instructor document by referencing the created User
-      const newInstructor = new Instructor({
-        user: newUser._id, // Reference to the newly created User
-        department,
-      });
-
-      // Save the Instructor document
-      await newInstructor.save();
-
-      res.status(201).json({
-        message: "Instructor created successfully",
-        instructor: newInstructor,
-      });
+      res.status(201).json({ message: "Instructor created successfully", instructor });
     } catch (error) {
-      console.error("Error creating instructor:", error);
-      res.status(500).json({
-        message: "Something went wrong while creating the instructor.",
-      });
+      res.status(500).json({ message: "Something went wrong" });
     }
   },
+
+  // Get all instructors
   async getAllInstructors(req, res) {
     try {
       const instructors = await Instructor.find().populate("user");
       res.status(200).json(instructors);
     } catch (error) {
-      console.error("Error fetching instructors:", error);
-      res
-        .status(500)
-        .json({ message: "Something went wrong while fetching instructors." });
+      res.status(500).json({ message: "Something went wrong" });
     }
   },
+
+  // Delete instructor
   async deleteInstructor(req, res) {
     try {
-      const { id } = req.params;
-      const instructor = await Instructor.findByIdAndDelete(id);
-      if (!instructor) {
-        return res.status(404).json({ message: "Instructor not found" });
-      }
+      const instructor = await Instructor.findByIdAndDelete(req.params.id);
+      if (!instructor) return res.status(404).json({ message: "Instructor not found" });
       res.status(200).json({ message: "Instructor deleted successfully" });
     } catch (error) {
-      console.error("Error deleting instructor:", error);
-      res
-        .status(500)
-        .json({
-          message: "Something went wrong while deleting the instructor.",
-        });
+      res.status(500).json({ message: "Something went wrong" });
     }
   },
 };

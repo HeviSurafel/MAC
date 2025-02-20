@@ -96,7 +96,7 @@ const Navbar = () => {
               <div className="relative dropdown">
                 {/* Welcome Message */}
                 <span className="text-white text-sm font-medium">
-                  Welcome, {user.state.user.name}!
+                  Welcome, {user?.state?.user?.name}!
                 </span>
 
                 {/* Dropdown Toggle */}

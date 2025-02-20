@@ -39,6 +39,7 @@ const protectRoute = async (req, res, next) => {
   }
 };
 const InstractorRoute=(req,res,next)=>{
+  console.log(req.user);
   if(req.user && req.user.role==="instructor"){
     next();
   }else{

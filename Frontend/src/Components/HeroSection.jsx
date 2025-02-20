@@ -1,6 +1,6 @@
 import React from 'react';
 import { TypeAnimation } from 'react-type-animation'; // Updated library
-import Logo from '../assets/CODE ACADEMY 1.png'; // Ensure the path is correct
+import Logo from '../assets/image01.jpg'; // Ensure the path is correct
 
 const HeroSection = () => {
   return (

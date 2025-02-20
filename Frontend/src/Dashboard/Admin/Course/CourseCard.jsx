@@ -2,7 +2,6 @@ import React from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 
 const CourseCard = ({ course, openEditModal, deleteCourse }) => {
-  console.log(course);
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
       <div className="p-6">

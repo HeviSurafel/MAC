@@ -9,19 +9,18 @@ const Sidebar = () => {
   const { user } = useAuthStore(); // Get the user data from the store
 
   // Sidebar links
-  const Adminlinks = [
+  const links = [
     { path: "/dashboard", icon: <FaHome />, label: "Dashboard" },
-    { path: "/dashboard/users", icon: <FaUsers />, label: "Users", roles: ['admin'] },
-    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile", roles: ['admin', 'user'] },
-    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses", roles: ['admin', 'instructor', 'user'] },
-    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments", roles: ['admin', 'instructor'] },
-    { path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback", roles: ['user'] },
-    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor", roles: ['admin'] },
-    { path: "/dashboard/settings", icon: <FaCog />, label: "Settings", roles: ['admin'] },
+    { path: "/dashboard/users", icon: <FaUsers />, label: "Users", },
+    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile",},
+    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses"},
+    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments"},
+    { path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback", },
+    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor", },
+    { path: "/dashboard/settings", icon: <FaCog />, label: "Settings" },
   ];
 
   // Filter links based on user role
-  const filteredLinks = Adminlinks.filter(link => link.roles?.includes(user?.role));
 
   return (
     <div className="w-64 bg-gray-800 text-white fixed top-16 left-0 h-screen flex flex-col">
@@ -33,7 +32,7 @@ const Sidebar = () => {
       {/* Navigation Links */}
       <nav className="flex-1">
         <ul className="space-y-2">
-          {filteredLinks.map((link) => (
+          {links.map((link) => (
             <li key={link.path}>
               <Link
                 to={link.path}
