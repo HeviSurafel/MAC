@@ -1,26 +1,27 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaHome, FaUsers, FaBook, FaCog, FaSignOutAlt } from "react-icons/fa";
-import { MdOutlineSchedule } from "react-icons/md";
-import useAuthStore from "../Store/useAuthStore"; // Import your authentication store
+import useAuthStore from "../Store/useAuthStore"; // Import authentication store
 
 const Sidebar = () => {
   const location = useLocation();
-  const { user } = useAuthStore(); // Get the user data from the store
+  const { user } = useAuthStore(); // Get user data from the store
 
   // Sidebar links
   const links = [
     { path: "/dashboard", icon: <FaHome />, label: "Dashboard" },
-    { path: "/dashboard/users", icon: <FaUsers />, label: "Users", },
-    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile",},
-    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses"},
-    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments"},
-    { path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback", },
-    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor", },
+    { path: "/dashboard/users", icon: <FaUsers />, label: "Users" },
+    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile" },
+    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses" },
+    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments" },
+    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor" },
     { path: "/dashboard/settings", icon: <FaCog />, label: "Settings" },
   ];
 
-  // Filter links based on user role
+  // Add Feedback only if the user is a student
+  if (user?.role === "student") {
+    links.push({ path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback" });
+  }
 
   return (
     <div className="w-64 bg-gray-800 text-white fixed top-16 left-0 h-screen flex flex-col">

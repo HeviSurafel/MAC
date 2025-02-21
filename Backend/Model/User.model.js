@@ -16,12 +16,6 @@ const userSchema = mongoose.Schema({
     }
   },
   password: { type: String, required: true,min:6 },
-  sectionAssignments: [
-    {
-      course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-      section: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], required: true , default: "A"},
-    },
-  ],
   role: { type: String, enum: ['admin', 'instructor', 'student'], required: true, default: "student" },
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
   dateOfBirth: { type: Date,  },

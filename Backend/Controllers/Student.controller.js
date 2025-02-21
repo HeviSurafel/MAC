@@ -1,6 +1,5 @@
 const Course = require("../Model/Course.model");
 const QRCode = require("qrcode");
-const Student = require("../Model/Student.model");
 
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
@@ -8,68 +7,56 @@ const ERROR_MESSAGES = {
   ASSESSMENT_NOT_FOUND: "Assessment not found",
   ASSESSMENT_SUBMITTED: "Assessment submitted successfully",
   GRADES_NOT_FOUND: "No grades found",
+  STUDENT_NOT_FOUND: "Student not found",
+  QR_GENERATION_ERROR: "Error generating certificate QR code",
 };
 
 // Get all courses enrolled by the student
 const getStudentCourses = async (req, res) => {
   try {
     const studentId = req.user._id;
-    const courses = await Course.find({ studentsEnrolled: studentId }).populate(
-      "instructors"
-    );
+    const courses = await Course.find({ studentsEnrolled: studentId }).populate("instructors");
     res.status(200).json(courses);
   } catch (error) {
     console.error("Get Student Courses Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Get course materials for a specific course
+// Get course materials
 const getCourseMaterials = async (req, res) => {
   try {
     const { courseId } = req.params;
     const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-    }
-    res.status(200).json(course.materials);
+    if (!course) return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
+    res.status(200).json(course.materials || []);
   } catch (error) {
     console.error("Get Course Materials Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Submit an assessment (as assessments are now part of the Course model)
+// Submit an assessment
 const submitAssessment = async (req, res) => {
   try {
     const { courseId, assessmentId } = req.params;
     const { fileUrl } = req.body;
+    const studentId = req.user._id;
 
     const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-    }
+    if (!course) return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
 
     const assessment = course.assessments.id(assessmentId);
-    if (!assessment) {
-      return res.status(404).json({ message: ERROR_MESSAGES.ASSESSMENT_NOT_FOUND });
-    }
+    if (!assessment) return res.status(404).json({ message: ERROR_MESSAGES.ASSESSMENT_NOT_FOUND });
 
-    // Create the submission object
-    const studentSubmission = {
-      student: req.user._id,
-      fileUrl,
-      submittedAt: Date.now(),
-    };
-
-    // Push the submission to the specific assessment
-    assessment.studentSubmissions.push(studentSubmission);
+    // Push the student's submission
+    assessment.studentSubmissions.push({ student: studentId, fileUrl, submittedAt: Date.now() });
     await course.save();
 
     res.status(201).json({ message: ERROR_MESSAGES.ASSESSMENT_SUBMITTED, assessment });
   } catch (error) {
     console.error("Submit Assessment Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -77,16 +64,11 @@ const submitAssessment = async (req, res) => {
 const viewGrades = async (req, res) => {
   try {
     const studentId = req.user._id;
+    const courses = await Course.find({ studentsEnrolled: studentId });
 
-    const courses = await Course.find({
-      studentsEnrolled: studentId,
-    });
-
-    const grades = courses.flatMap((course) =>
-      course.assessments.map((assessment) => {
-        const submission = assessment.studentSubmissions.find(
-          (sub) => sub.student.toString() === studentId
-        );
+    const grades = courses.flatMap(course =>
+      course.assessments.map(assessment => {
+        const submission = assessment.studentSubmissions.find(sub => sub.student.toString() === studentId);
         return {
           courseName: course.courseName,
           assessmentTitle: assessment.title,
@@ -95,10 +77,10 @@ const viewGrades = async (req, res) => {
       })
     );
 
-    res.status(200).json(grades);
+    res.status(200).json(grades.length ? grades : { message: ERROR_MESSAGES.GRADES_NOT_FOUND });
   } catch (error) {
     console.error("View Grades Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -106,34 +88,23 @@ const viewGrades = async (req, res) => {
 const certificate = async (req, res) => {
   try {
     const { studentId } = req.params;
+    const student = await Course.findOne({ studentsEnrolled: studentId }).populate("studentsEnrolled");
 
-    // Fetch student details from the database (example)
-    const student = await Student.findById(studentId).select(
-      "name course grade"
-    );
+    if (!student) return res.status(404).json({ message: ERROR_MESSAGES.STUDENT_NOT_FOUND });
 
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    // Create certification data (customize as needed)
     const certificationData = JSON.stringify({
-      studentId: student._id,
-      name: student.name,
-      course: student.course,
-      grade: student.grade,
+      studentId,
+      name: student.studentsEnrolled.name,
+      courses: student.courseName,
       issuedAt: new Date().toISOString(),
     });
 
-    // Generate QR code as a PNG image buffer
     const qrImage = await QRCode.toBuffer(certificationData, { type: "png" });
-
-    // Set the response headers to indicate an image
     res.set("Content-Type", "image/png");
-    res.send(qrImage); // Send the QR code image as the response
+    res.send(qrImage);
   } catch (error) {
-    console.error("Error generating certificate QR code:", error);
-    res.status(500).json({ message: "Error generating certificate QR code" });
+    console.error("QR Code Generation Error:", error);
+    res.status(500).json({ message: ERROR_MESSAGES.QR_GENERATION_ERROR });
   }
 };
 

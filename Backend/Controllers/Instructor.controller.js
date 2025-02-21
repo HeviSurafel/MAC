@@ -1,4 +1,6 @@
 const Course = require("../Model/Course.model");
+const User = require("../Model/User.model");
+const Section = require("../Model/Section.model");
 
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
@@ -8,127 +10,76 @@ const ERROR_MESSAGES = {
   ASSESSMENT_GRADED: "Assessment graded successfully",
 };
 
-// Get all courses assigned to the instructor
-const getInstructorCourses = async (req, res) => {
+// Get students by course and section
+const getCourseStudentsBySection = async (req, res) => {
   try {
-    const instructorId = req.user._id;
-
-    // Find courses where the instructor has section assignments
-    const instructor = await User.findById(instructorId).populate({
-      path: "sectionAssignments.course",
-      select: "name",
+    const { courseId, selectedSection } = req.params;
+    // Find section by courseId and section letter
+    const sectionData = await Section.findOne({ course: courseId, section: selectedSection })
+    .populate({
+      path: "students",
+      select: "name email studentId" // Only return specific fields for students
+    })
+    .populate({
+      path: "course",
+      select: "courseName instructorId exam assignment FinalResult" // Only return specific fields for the course
     });
-
-    if (!instructor || instructor.role !== "instructor") {
-      return res.status(404).json({ message: "Instructor not found." });
+  
+console.log(sectionData);
+    if (!sectionData) {
+      return res.status(404).json({ message: "Section not found." });
     }
 
-    const courses = instructor.sectionAssignments.map((assignment) => ({
-      courseId: assignment.course._id,
-      courseName: assignment.course.name,
-      section: assignment.section,
-    }));
+    if (!sectionData.students || sectionData.students.length === 0) {
+      return res.status(404).json({ message: "No students found in this section." });
+    }
 
-    // Find students enrolled in the same course and section
-    const students = await User.find({
-      role: "student",
-      "sectionAssignments": {
-        $elemMatch: { course: { $in: courses.map(c => c.courseId) } },
-      },
-    }).select("firstName lastName sectionAssignments");
-
-    const formattedCourses = courses.map((course) => ({
-      id: course.courseId,
-      name: course.courseName,
-      section: course.section,
-      students: students
-        .filter(student =>
-          student.sectionAssignments.some(
-            assign => assign.course.equals(course.courseId) && assign.section === course.section
-          )
-        )
-        .map(student => ({
-          id: student._id,
-          name: `${student.firstName} ${student.lastName}`,
-        })),
-    }));
-
-    res.status(200).json(formattedCourses);
+    res.status(200).json(sectionData);
   } catch (error) {
-    console.error("Error fetching instructor courses:", error);
+    console.error("Error fetching students by course and section:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
-// Get students enrolled in a specific course
-const getCourseStudents = async (req, res) => {
+
+
+
+// Get instructor's courses and students
+const getInstructorCoursesAndStudents = async (req, res) => {
   try {
-    const { courseId } = req.params;
+    const instructorId = req.user._id;
 
-    // Find the course and populate studentsEnrolled and assessments
-    const course = await Course.findById(courseId)
-      .populate("studentsEnrolled");  // Populate students enrolled in the course
+    // Find all sections where the instructor is assigned
+    const sections = await Section.find({ instructors: instructorId })
+      .populate({
+        path: "course",
+        select: "courseName courseCode",
+      })
+      .populate({
+        path: "students",
+        select: "firstName lastName email",
+      });
 
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
+    if (!sections || sections.length === 0) {
+      return res.status(404).json({ message: "No sections found for this instructor." });
     }
 
-    res.status(200).json(course.studentsEnrolled);  // Return students enrolled in the course
+    // Format response
+    const coursesWithStudents = sections.map((section) => ({
+      courseId: section.course._id,
+      courseName: section.course.courseName,
+      section: section.section,
+      students: section.students.map(student => ({
+        studentId: student._id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+      })),
+    }));
+
+    res.status(200).json(coursesWithStudents);
   } catch (error) {
-    console.error("Get Course Students Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
-  }
-};
-
-// Upload course material
-const uploadCourseMaterial = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const { title, description, fileUrl } = req.body;
-
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-    }
-
-    course.materials.push({ title, description, fileUrl });
-    await course.save();
-
-    res.status(201).json({ message: ERROR_MESSAGES.MATERIAL_UPLOADED, course });
-  } catch (error) {
-    console.error("Upload Course Material Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
-  }
-};
-
-// Create an assessment within a course
-const createAssessment = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const { title, description, dueDate, exam, assignment, maxScore } = req.body;
-
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-    }
-
-    // Create a new assessment and add it to the course's assessments array
-    const assessment = {
-      title,
-      description,
-      dueDate,
-      exam,
-      assignment,
-      maxScore,
-      studentSubmissions: [],
-    };
-
-    course.assessments.push(assessment);
-    await course.save();
-
-    res.status(201).json({ message: ERROR_MESSAGES.ASSESSMENT_CREATED, assessment });
-  } catch (error) {
-    console.error("Create Assessment Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    console.error("Error fetching instructor courses and students:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -169,9 +120,7 @@ const gradeAssessment = async (req, res) => {
 };
 
 module.exports = {
-  getInstructorCourses,
-  getCourseStudents,
-  uploadCourseMaterial,
-  createAssessment,
   gradeAssessment,
+  getCourseStudentsBySection,
+  getInstructorCoursesAndStudents,
 };

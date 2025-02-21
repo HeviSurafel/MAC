@@ -45,7 +45,9 @@ function App() {
               <Route index element={<DashboardOverview />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="instructor" element={<InstructorsPage />} />
-              <Route path="feedback" element={<FeedbackPage />} />
+              {user.role === "student" && (
+                <Route path="feedback" element={<FeedbackPage />} />
+              )}
               <Route path="profile" element={<Profile />} />
               <Route path="courses" element={<CourseManagement />} />
               <Route path="assessments" element={<AssessmentManagement />} />

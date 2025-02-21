@@ -3,7 +3,7 @@ import { FaPen } from 'react-icons/fa';
 import {useUserStore} from '../../Store/useAuthStore';
 function PersonalInfoSection({onEdit}) {
   const {user,}=useUserStore();
- 
+ console.log(user);
   return (
     <div className="mb-6 p-4 border border-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex justify-between items-center">
@@ -20,7 +20,7 @@ function PersonalInfoSection({onEdit}) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">First Name</label>
-          <div className="mt-1">{user.firstName}</div>
+          <div className="mt-1">{user.name}</div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Last Name</label>

@@ -3,31 +3,37 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 import useInstructorStore from "../Store/Instractor.Store";
 import { useUserStore } from "../Store/useAuthStore";
 
+const sections = ["A", "B", "C", "D", "E", "F", "G"];
+
 const AssessmentManagement = () => {
-  const { user } = useUserStore(); // Get the logged-in user (instructor)
-  const { courses, fetchCourseAssessments, courseAssessments, fetchInstructorCourses,fetchCourseStudents, courseStudents, updateAssessment } = useInstructorStore(); // Store actions and data
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [isTeacher, setIsTeacher] = useState(false);
+  const { user } = useUserStore();
+  const {
+    courses,
+    getInstructorCoursesAndStudents,
+    fetchCourseStudents,
+    fetchCourseAssessments,
+    updateAssessment,
+    courseStudents,
+    courseAssessments,
+  } = useInstructorStore();
+
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
 
   useEffect(() => {
     if (user?.role === "instructor") {
-      setIsTeacher(true);
-    }
-
-    // Fetch instructor's courses when the component mounts
-    if (user?.id) {
-      fetchInstructorCourses(user?.id); // Assuming user has an id property
+      getInstructorCoursesAndStudents();
     }
   }, [user]);
 
   useEffect(() => {
-    if (selectedCourse) {
-      // Fetch students for the selected course
-      fetchCourseStudents(selectedCourse);
+    if (selectedCourse && selectedSection) {
+      fetchCourseStudents(selectedCourse, selectedSection);
+      fetchCourseAssessments(selectedCourse, selectedSection);
     }
-  }, [selectedCourse]);
+  }, [selectedCourse, selectedSection]);
 
   const openEditModal = (assessment) => {
     setEditingAssessment(assessment);
@@ -39,162 +45,142 @@ const AssessmentManagement = () => {
     setIsEditModalOpen(false);
   };
 
-  const saveEditedMarks = (updatedAssessment) => {
-    // updatedAssessment.grade = calculateGrade(updatedAssessment);
-    // updateAssessment(updatedAssessment);
-    // closeEditModal();
+  const handleAssessmentChange = (key, value) => {
+    setEditingAssessment((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleCourseChange = (e) => {
-    const courseId = e.target.value;
-    setSelectedCourse(courseId);
-    fetchCourseAssessments(courseId); // Fetch assessments for the selected course
+  const saveEditedMarks = (e) => {
+    e.preventDefault();
+    updateAssessment(editingAssessment);
+    closeEditModal();
   };
-  console.log(courses)
+  console.log(courseStudents)
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: {user?.name}</h1>
 
-      {/* Course Dropdown */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
-        <select
-          value={selectedCourse || ""}
-          onChange={handleCourseChange}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Select a course</option>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.name}
-            </option>
-          ))}
-        </select>
+      {/* Course & Section Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:ring-blue-500"
+          >
+            <option value="">Select a course</option>
+            {courses?.map(({ courseId, courseName }) => (
+              <option key={courseId} value={courseId}>
+                {courseName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Section</label>
+          <select
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:ring-blue-500"
+            disabled={!selectedCourse}
+          >
+            <option value="">Select a section</option>
+            {sections.map((section) => (
+              <option key={section} value={section}>
+                 {section}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Students List */}
-      <div className="mb-6">
-        <h3 className="text-xl font-bold">Students in the course</h3>
-        <ul>
-          {courseStudents.map((student) => (
-            <li key={student.id}>{student.name}</li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Assessment Table */}
-      <table className="min-w-full table-auto bg-white rounded-lg shadow-lg">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Student Name</th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Course Name</th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Assignment Result</th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Exam Result</th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Final Exam Result</th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Grade</th>
-            {isTeacher && (
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Actions</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {courseAssessments.map((assessment) => (
-            <tr key={assessment.id} className="border-b hover:bg-gray-100">
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">{assessment.studentName}</td>
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">{assessment.courseName}</td>
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.assignmentResult || "Not Assigned Yet"}
-              </td>
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.examResult || "Not Assigned Yet"}
-              </td>
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.finalExamResult || "Not Assigned Yet"}
-              </td>
-              <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                {assessment.grade || "Not Graded Yet"}
-              </td>
-              {isTeacher && (
-                <td className="px-6 py-4 text-sm font-medium">
-                  <button className="text-blue-500 hover:text-blue-700 mr-4" onClick={() => openEditModal(assessment)}>
-                    <FaEdit />
-                  </button>
-                  <button className="text-red-500 hover:text-red-700" onClick={() => {}}>
-                    <FaTrash />
-                  </button>
-                </td>
+      {/* Students & Assessments */}
+      {selectedCourse && selectedSection && (
+        <>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold mb-4">
+              Students in {courses.find((c) => c.courseId === selectedCourse)?.courseName} - Section {selectedSection}
+            </h3>
+            <ul className="list-disc ml-6">
+              {courseStudents?.length ? (
+                courseStudents.map(({ id, name }) => <li key={id}>{name}</li>)
+              ) : (
+                <li>No students found.</li>
               )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </ul>
+          </div>
 
-      {/* Edit Marks Modal */}
+          <table className="min-w-full table-auto bg-white rounded-lg shadow-lg">
+            <thead className="bg-gray-200">
+              <tr>
+                <th className="px-4 py-2">Student Name</th>
+                <th className="px-4 py-2">Assignment Result</th>
+                <th className="px-4 py-2">Exam Result</th>
+                <th className="px-4 py-2">Final Exam Result</th>
+                <th className="px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courseStudents?.length ? (
+                courseAssessments.map((assessment) => (
+                  <tr key={assessment.id} className="border-b hover:bg-gray-100">
+                    <td className="px-4 py-2">{assessment.studentName}</td>
+                    <td className="px-4 py-2">{assessment.assignmentResult ?? "Not Assigned"}</td>
+                    <td className="px-4 py-2">{assessment.examResult ?? "Not Assigned"}</td>
+                    <td className="px-4 py-2">{assessment.finalExamResult ?? "Not Assigned"}</td>
+                    <td className="px-4 py-2 flex space-x-2">
+                      <button
+                        className="text-blue-500 hover:text-blue-700"
+                        onClick={() => openEditModal(assessment)}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button className="text-red-500 hover:text-red-700">
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-4 py-4 text-center text-gray-500">No assessments found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Edit Assessment Modal */}
       {isEditModalOpen && editingAssessment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg w-11/12 max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              {editingAssessment.studentName} - Update Marks
-            </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                saveEditedMarks(editingAssessment);
-              }}
-            >
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assignment Result</label>
-                <input
-                  type="number"
-                  value={editingAssessment.assignmentResult || ""}
-                  onChange={(e) =>
-                    setEditingAssessment({
-                      ...editingAssessment,
-                      assignmentResult: e.target.value,
-                    })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Result</label>
-                <input
-                  type="number"
-                  value={editingAssessment.examResult || ""}
-                  onChange={(e) =>
-                    setEditingAssessment({
-                      ...editingAssessment,
-                      examResult: e.target.value,
-                    })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Final Exam Result</label>
-                <input
-                  type="number"
-                  value={editingAssessment.finalExamResult || ""}
-                  onChange={(e) =>
-                    setEditingAssessment({
-                      ...editingAssessment,
-                      finalExamResult: e.target.value,
-                    })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
+          <div className="bg-white p-6 rounded-lg w-11/12 max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold mb-4">Edit Marks for {editingAssessment.studentName}</h2>
+            <form onSubmit={saveEditedMarks}>
+              {["Assignment", "Exam", "Final Exam"].map((label) => {
+                const key = `${label.toLowerCase().replace(/ /g, "")}Result`;
+                return (
+                  <div className="mb-4" key={label}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{label} Result</label>
+                    <input
+                      type="number"
+                      value={editingAssessment[key] ?? ""}
+                      onChange={(e) => handleAssessmentChange(key, e.target.value)}
+                      className="w-full p-2 border rounded-lg focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                      required
+                    />
+                  </div>
+                );
+              })}
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="mr-4 py-2 px-4 bg-gray-200 text-gray-700 rounded-md"
+                  className="mr-3 py-2 px-4 bg-gray-200 rounded-md"
                 >
                   Cancel
                 </button>

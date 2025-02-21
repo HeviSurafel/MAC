@@ -73,7 +73,8 @@ const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, c
               className="w-full p-3 border border-gray-300 rounded-lg"
             >
               <option value="">Select Instructor</option>
-              {instructors.map((inst) => (
+              <option value="No Instructor">No Instructor</option> {/* Added "No Instructor" option */}
+              {instructors?.map((inst) => (
                 <option key={inst._id} value={inst.user?.firstName}>
                   {inst.user?.firstName}
                 </option>

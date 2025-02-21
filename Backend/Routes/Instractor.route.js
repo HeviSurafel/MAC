@@ -1,19 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const { protectRoute,InstractorRoute } = require("../Middleware/Protect.route");
+const { protectRoute, InstractorRoute } = require("../Middleware/Protect.route");
 const {
-  getInstructorCourses,
-  getCourseStudents,
-  uploadCourseMaterial,
-  createAssessment,
+  getInstructorCoursesAndStudents,
+  getCourseStudentsBySection,
   gradeAssessment,
 } = require("../Controllers/Instructor.controller");
 
 // Instructor Routes
-router.get("/courses", protectRoute,InstractorRoute, getInstructorCourses); // Get all courses assigned to the instructor
-router.get("/courses/:courseId/students",protectRoute,InstractorRoute, getCourseStudents); // Get students enrolled in a specific course
-router.post("/courses/:courseId/materials",protectRoute,InstractorRoute, uploadCourseMaterial); // Upload course material
-router.post("/courses/:courseId/assessments", protectRoute,InstractorRoute, createAssessment); // Create an assessment
-router.put("/assessments/:assessmentId/grade",protectRoute,InstractorRoute,  gradeAssessment); // Grade an assessment
+router.get("/instructor/courses", protectRoute, InstractorRoute, getInstructorCoursesAndStudents);
+router.get("/instructor/courses/:courseId/sections/:selectedSection/students", protectRoute, InstractorRoute, getCourseStudentsBySection);
+router.put("/instructor/assessments/:assessmentId", protectRoute, InstractorRoute, gradeAssessment);
 
 module.exports = router;

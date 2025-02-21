@@ -42,28 +42,13 @@ const FeedbackPage = () => {
           {/* Comments Section */}
           <div className="mb-6">
             <label className="block text-gray-700 text-sm font-medium mb-2">
-              Comments
+              Message
             </label>
             <textarea
               name="comments"
               value={feedback.comments}
               onChange={handleFeedbackChange}
               placeholder="Share your experience or thoughts here..."
-              rows="4"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            ></textarea>
-          </div>
-
-          {/* Suggestions Section */}
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Suggestions
-            </label>
-            <textarea
-              name="suggestions"
-              value={feedback.suggestions}
-              onChange={handleFeedbackChange}
-              placeholder="Any suggestions to improve?"
               rows="4"
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             ></textarea>

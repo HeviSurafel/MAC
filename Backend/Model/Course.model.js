@@ -18,7 +18,11 @@ const courseSchema = mongoose.Schema({
       submittedAt: { type: Date },
     }],
   }],
-  instructors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Instructor' }],
+  instructors: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Instructor', 
+    default: null // Allow null if no instructor is assigned
+  }],
   studentsEnrolled: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
