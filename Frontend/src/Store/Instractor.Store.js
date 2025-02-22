@@ -4,7 +4,6 @@ import axios from "../lib/axios";
 const useInstructorStore = create((set) => ({
   courses: [],
   courseStudents: [],
-  courseAssessments: [],
   isLoading: false,
   error: null,
 
@@ -29,38 +28,41 @@ const useInstructorStore = create((set) => ({
     }
   },
   
-
-  fetchCourseAssessments: async (courseId) => {
+  updateAssessment: async (studentId, updatedData, selectedCourse, selectedSection) => {
     set({ isLoading: true });
-    try {
-      const response = await axios.get(`/instructor/courses/${courseId}/assessments`);
-      set({ courseAssessments: response.data, isLoading: false });
-    } catch (error) {
-      set({ error: "Failed to load assessments", isLoading: false });
-    }
-  },
 
-  updateAssessment: async (updatedAssessment) => {
-    set({ isLoading: true });
     try {
-      const response = await axios.put(`/instructor/assessments/${updatedAssessment.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedAssessment),
+      console.log("Updating Assessment with:", {
+        studentId,
+        selectedCourse,
+        selectedSection,
+        updatedData,
       });
 
-      if (!response.ok) throw new Error("Failed to update assessment");
+      if (!selectedCourse || !selectedSection || !studentId) {
+        throw new Error("Missing required parameters: courseId, section, or studentId");
+      }
+
+      const response = await axios.put(
+        `/instructor/assessments/update/${selectedCourse}/${selectedSection}/${studentId}`,
+        updatedData
+      );
+
+      if (response.status !== 200) throw new Error("Failed to update assessment");
 
       set((state) => ({
-        courseAssessments: state.courseAssessments.map((assessment) =>
-          assessment.id === updatedAssessment.id ? updatedAssessment : assessment
+        courseStudents: state.courseStudents.map((student) =>
+          student._id === studentId ? { ...student, ...updatedData } : student
         ),
         isLoading: false,
       }));
     } catch (error) {
       set({ error: "Error updating assessment", isLoading: false });
+      console.error("Error updating assessment:", error);
     }
   },
+
+
 }));
 
 export default useInstructorStore;

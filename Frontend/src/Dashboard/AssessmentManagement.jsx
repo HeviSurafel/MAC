@@ -11,10 +11,8 @@ const AssessmentManagement = () => {
     courses,
     getInstructorCoursesAndStudents,
     fetchCourseStudents,
-    fetchCourseAssessments,
     updateAssessment,
     courseStudents,
-    courseAssessments,
   } = useInstructorStore();
 
   const [selectedCourse, setSelectedCourse] = useState("");
@@ -31,12 +29,18 @@ const AssessmentManagement = () => {
   useEffect(() => {
     if (selectedCourse && selectedSection) {
       fetchCourseStudents(selectedCourse, selectedSection);
-      fetchCourseAssessments(selectedCourse, selectedSection);
     }
   }, [selectedCourse, selectedSection]);
 
-  const openEditModal = (assessment) => {
-    setEditingAssessment(assessment);
+  const openEditModal = (student) => {
+    setEditingAssessment({
+      studentId: student._id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      assignmentWeight: student.assignmentWeight ?? "",
+      examWeight: student.examWeight ?? "",
+      finalWeight: student.finalWeight ?? "",
+    });
     setIsEditModalOpen(true);
   };
 
@@ -49,21 +53,37 @@ const AssessmentManagement = () => {
     setEditingAssessment((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveEditedMarks = (e) => {
+  const saveEditedMarks = async (e) => {
     e.preventDefault();
-    updateAssessment(editingAssessment);
-    closeEditModal();
+    if (editingAssessment?.studentId) {
+      await updateAssessment(
+        editingAssessment.studentId,
+        {
+          assignmentWeight: editingAssessment.assignmentWeight,
+          examWeight: editingAssessment.examWeight,
+          finalWeight: editingAssessment.finalWeight,
+        },
+        selectedCourse,
+        selectedSection
+      );
+      fetchCourseStudents(selectedCourse, selectedSection);
+      closeEditModal();
+    } else {
+      console.error("Invalid assessment data:", editingAssessment);
+    }
   };
-  console.log(courseStudents)
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: {user?.name}</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-8">
+        Instructor: {user?.name}
+      </h1>
 
-      {/* Course & Section Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Course
+          </label>
           <select
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
@@ -79,7 +99,9 @@ const AssessmentManagement = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Section</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Section
+          </label>
           <select
             value={selectedSection}
             onChange={(e) => setSelectedSection(e.target.value)}
@@ -89,28 +111,18 @@ const AssessmentManagement = () => {
             <option value="">Select a section</option>
             {sections.map((section) => (
               <option key={section} value={section}>
-                 {section}
+                {section}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Students & Assessments */}
       {selectedCourse && selectedSection && (
         <>
-          <div className="mb-6">
-            <h3 className="text-xl font-bold mb-4">
-              Students in {courses.find((c) => c.courseId === selectedCourse)?.courseName} - Section {selectedSection}
-            </h3>
-            <ul className="list-disc ml-6">
-              {courseStudents?.length ? (
-                courseStudents.map(({ id, name }) => <li key={id}>{name}</li>)
-              ) : (
-                <li>No students found.</li>
-              )}
-            </ul>
-          </div>
+          <h3 className="text-xl font-bold mb-4">
+            Students in {courses.find((c) => c.courseId === selectedCourse)?.courseName} - Section {selectedSection}
+          </h3>
 
           <table className="min-w-full table-auto bg-white rounded-lg shadow-lg">
             <thead className="bg-gray-200">
@@ -123,70 +135,45 @@ const AssessmentManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {courseStudents?.length ? (
-                courseAssessments.map((assessment) => (
-                  <tr key={assessment.id} className="border-b hover:bg-gray-100">
-                    <td className="px-4 py-2">{assessment.studentName}</td>
-                    <td className="px-4 py-2">{assessment.assignmentResult ?? "Not Assigned"}</td>
-                    <td className="px-4 py-2">{assessment.examResult ?? "Not Assigned"}</td>
-                    <td className="px-4 py-2">{assessment.finalExamResult ?? "Not Assigned"}</td>
-                    <td className="px-4 py-2 flex space-x-2">
-                      <button
-                        className="text-blue-500 hover:text-blue-700"
-                        onClick={() => openEditModal(assessment)}
-                      >
-                        <FaEdit />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700">
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-4 py-4 text-center text-gray-500">No assessments found.</td>
+              {courseStudents?.map((student) => (
+                <tr key={student._id} className="border-b hover:bg-gray-100">
+                  <td className="px-4 py-2">{student.firstName} {student.lastName}</td>
+                  <td className="px-4 py-2">{student.assignmentWeight ?? "Not Assigned"}</td>
+                  <td className="px-4 py-2">{student.examWeight ?? "Not Assigned"}</td>
+                  <td className="px-4 py-2">{student.finalWeight ?? "Not Assigned"}</td>
+                  <td className="px-4 py-2 flex space-x-2">
+                    <button className="text-blue-500 hover:text-blue-700" onClick={() => openEditModal(student)}>
+                      <FaEdit />
+                    </button>
+                    <button className="text-red-500 hover:text-red-700">
+                      <FaTrash />
+                    </button>
+                  </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </>
       )}
 
-      {/* Edit Assessment Modal */}
       {isEditModalOpen && editingAssessment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-11/12 max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">Edit Marks for {editingAssessment.studentName}</h2>
+            <h2 className="text-xl font-bold mb-4">
+              Edit Marks for {editingAssessment.firstName} {editingAssessment.lastName}
+            </h2>
             <form onSubmit={saveEditedMarks}>
-              {["Assignment", "Exam", "Final Exam"].map((label) => {
-                const key = `${label.toLowerCase().replace(/ /g, "")}Result`;
-                return (
-                  <div className="mb-4" key={label}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">{label} Result</label>
-                    <input
-                      type="number"
-                      value={editingAssessment[key] ?? ""}
-                      onChange={(e) => handleAssessmentChange(key, e.target.value)}
-                      className="w-full p-2 border rounded-lg focus:ring-blue-500"
-                      min="0"
-                      max="100"
-                      required
-                    />
-                  </div>
-                );
-              })}
+              {["assignmentWeight", "examWeight", "finalWeight"].map((key) => (
+                <div className="mb-4" key={key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {key.replace("Weight", " Result")}
+                  </label>
+                  <input type="number" value={editingAssessment[key] ?? ""} onChange={(e) => handleAssessmentChange(key, e.target.value)} className="w-full p-2 border rounded-lg focus:ring-blue-500" min="0" max="100" required />
+                </div>
+              ))}
               <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="mr-3 py-2 px-4 bg-gray-200 rounded-md"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="py-2 px-6 bg-blue-500 text-white rounded-md">
-                  Save
-                </button>
+                <button type="button" onClick={closeEditModal} className="mr-3 py-2 px-4 bg-gray-200 rounded-md">Cancel</button>
+                <button type="submit" className="py-2 px-6 bg-blue-500 text-white rounded-md">Save</button>
               </div>
             </form>
           </div>

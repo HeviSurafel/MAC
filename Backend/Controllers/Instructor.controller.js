@@ -1,31 +1,18 @@
 const Course = require("../Model/Course.model");
-const User = require("../Model/User.model");
 const Section = require("../Model/Section.model");
+const Assessment = require("../Model/Assessment.model");
 
-const ERROR_MESSAGES = {
-  COURSE_NOT_FOUND: "Course not found",
-  STUDENTS_NOT_FOUND: "No students found for this course",
-  MATERIAL_UPLOADED: "Course material uploaded successfully",
-  ASSESSMENT_CREATED: "Assessment created successfully",
-  ASSESSMENT_GRADED: "Assessment graded successfully",
-};
-
-// Get students by course and section
 const getCourseStudentsBySection = async (req, res) => {
   try {
     const { courseId, selectedSection } = req.params;
-    // Find section by courseId and section letter
+
+    // Find the section
     const sectionData = await Section.findOne({ course: courseId, section: selectedSection })
-    .populate({
-      path: "students",
-      select: "name email studentId" // Only return specific fields for students
-    })
-    .populate({
-      path: "course",
-      select: "courseName instructorId exam assignment FinalResult" // Only return specific fields for the course
-    });
-  
-console.log(sectionData);
+      .populate({
+        path: "students",
+        select: "firstName lastName email studentId",
+      });
+
     if (!sectionData) {
       return res.status(404).json({ message: "Section not found." });
     }
@@ -34,9 +21,34 @@ console.log(sectionData);
       return res.status(404).json({ message: "No students found in this section." });
     }
 
-    res.status(200).json(sectionData);
+    // Find the assessment for this course and section
+    const assessment = await Assessment.findOne({ course: courseId, section: sectionData._id });
+
+    if (!assessment) {
+      return res.status(404).json({ message: "No assessment found for this section." });
+    }
+
+    // Map students and merge assessment results
+    const studentsWithAssessment = sectionData.students.map((student) => {
+      const studentAssessment = assessment.studentResults.find(
+        (sr) => sr.student.toString() === student._id.toString()
+      );
+
+      return {
+        _id: student._id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        studentId: student.studentId,
+        examWeight: assessment.examWeight,
+        assignmentWeight: assessment.assignmentWeight,
+        finalWeight: assessment.finalWeight,
+      };
+    });
+
+    res.status(200).json(studentsWithAssessment);
   } catch (error) {
-    console.error("Error fetching students by course and section:", error);
+    console.error("Error fetching students with assessment data:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -84,43 +96,52 @@ const getInstructorCoursesAndStudents = async (req, res) => {
 };
 
 // Grade an assessment for a specific student
-const gradeAssessment = async (req, res) => {
+
+const updateAssessment = async (req, res) => {
   try {
-    const { courseId, assessmentId } = req.params;
-    const { studentId, score } = req.body;
+    console.log("Request Params:", req.params);
+    console.log("Request Body:", req.body);
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
+    const { studentId, assignmentWeight, examWeight, finalWeight } = req.body;
+    const { courseId, section } = req.params;
+
+    if (!courseId || !section) {
+      return res.status(400).json({ message: "Missing courseId or section in the request." });
     }
 
-    // Find the specific assessment within the course
-    const assessment = course.assessments.id(assessmentId);
+    const sectionData = await Section.findOne({ course: courseId, section });
+    if (!sectionData) {
+      return res.status(404).json({ message: "Section not found." });
+    }
+
+    let assessment = await Assessment.findOne({ course: courseId, section: sectionData._id });
     if (!assessment) {
-      return res.status(404).json({ message: "Assessment not found" });
+      return res.status(404).json({ message: "Assessment not found." });
     }
 
-    // Find the student submission for that assessment
-    const studentSubmission = assessment.studentSubmissions.find(
-      (submission) => submission.student.toString() === studentId
+    let studentAssessment = assessment.studentResults.find(
+      (sr) => sr.student.toString() === studentId
     );
 
-    if (!studentSubmission) {
-      return res.status(404).json({ message: "Student submission not found" });
+    if (!studentAssessment) {
+      return res.status(404).json({ message: "Student assessment not found." });
     }
 
-    studentSubmission.score = score;
-    await course.save();
+    studentAssessment.assignmentWeight = assignmentWeight;
+    studentAssessment.examWeight = examWeight;
+    studentAssessment.finalWeight = finalWeight;
 
-    res.status(200).json({ message: ERROR_MESSAGES.ASSESSMENT_GRADED, assessment });
+    await assessment.save();
+    res.status(200).json({ message: "Assessment updated successfully", assessment });
   } catch (error) {
-    console.error("Grade Assessment Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    console.error("Error updating assessment:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
+
 module.exports = {
-  gradeAssessment,
+  updateAssessment,
   getCourseStudentsBySection,
   getInstructorCoursesAndStudents,
 };

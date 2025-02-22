@@ -2,76 +2,78 @@ const User = require("../Model/User.model");
 const Course = require("../Model/Course.model");
 const mongoose = require("mongoose");
 const Section = require("../Model/Section.model"); // Import the Section model
-
+const Assessment = require("../Model/Assessment.model");
 const AdminController = {
   async createUser(req, res) {
     try {
-      const {
-        firstName,
-        lastName,
-        email,
-        password,
-        role = "student",
-        status = "active",
-        dateOfBirth,
-        address,
-        phoneNumber,
-        department,
-        courses = [], // List of course IDs
-        section = '' // Single section value or comma-separated sections
-      } = req.body;
-  
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already exists." });
-      }
-  
-      const sections = section ? section.split(',').map(s => s.trim()) : [];
-  
-      const user = new User({
-        firstName,
-        lastName,
-        email,
-        password,
-        role,
-        status,
-        dateOfBirth,
-        address,
-        phoneNumber,
-        department,
-      });
-  
-      await user.save();
-  
-      for (let i = 0; i < courses.length; i++) {
-        const courseId = courses[i];
-        const sectionName = sections[i] || 'A';
-  
-        let existingSection = await Section.findOne({ course: courseId, section: sectionName });
-  
-        if (!existingSection) {
-          existingSection = new Section({ course: courseId, section: sectionName, students: [] });
-          await existingSection.save();
+        const {
+            firstName, lastName, email, password, role = "student", status = "active",
+            dateOfBirth, address, phoneNumber, department, courses = [], section = ''
+        } = req.body;
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: "Email already exists." });
+
+        const user = new User({ firstName, lastName, email, password, role, status, dateOfBirth, address, phoneNumber, department });
+        await user.save();
+
+        for (let i = 0; i < courses.length; i++) {
+            const courseId = courses[i];
+            const sectionName = section.split(',')[i] || 'A';
+
+            let existingSection = await Section.findOne({ course: courseId, section: sectionName });
+            if (!existingSection) {
+                existingSection = new Section({ course: courseId, section: sectionName, students: [] });
+                await existingSection.save();
+            }
+
+            if (role === "student") {
+                existingSection.students.push(user._id);
+                await existingSection.save();
+
+                const course = await Course.findById(courseId);
+                if (course && !course.studentsEnrolled.includes(user._id)) {
+                    course.studentsEnrolled.push(user._id);
+                    await course.save();
+                }
+
+                // **Push the student into the corresponding Assessment**
+                let existingAssessment = await Assessment.findOne({ course: courseId, section: existingSection._id });
+
+                if (!existingAssessment) {
+                    // **Create a new assessment for the section if none exists**
+                    existingAssessment = new Assessment({
+                        course: courseId,
+                        section: existingSection._id,
+                        examWeight: 0,   // Default weights, adjust as needed
+                        assignmentWeight: 0,
+                        finalWeight: 0,
+                        studentResults: []
+                    });
+                }
+
+                // **Check if student already exists in the assessment before adding**
+                const studentExists = existingAssessment.studentResults.some(result => result.student.equals(user._id));
+                if (!studentExists) {
+                    existingAssessment.studentResults.push({
+                        student: user._id,
+                        assignmentScore: 0,
+                        examScore: 0,
+                        finalScore: 0
+                    });
+                }
+
+                await existingAssessment.save();
+            }
         }
-  
-        if (role === "student") {
-          existingSection.students.push(user._id);
-          await existingSection.save();
-  
-          const course = await Course.findById(courseId);
-          if (course && !course.studentsEnrolled.includes(user._id)) {
-            course.studentsEnrolled.push(user._id);
-            await course.save();
-          }
-        }
-      }
-  
-      res.status(201).json({ message: "User created successfully", user });
+
+        res.status(201).json({ message: "User created successfully", user });
+
     } catch (error) {
-      console.error("Create User Error:", error);
-      res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
-  },
+}
+,
 
   async getAllUsers(req, res) {
     try {
