@@ -1,6 +1,8 @@
 const Course = require("../Model/Course.model");
 const QRCode = require("qrcode");
-
+const Assessment= require("../Model/Assessment.model");
+const User= require("../Model/User.model");
+const Feedback=require("../Model/Feedback.model")
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
   MATERIALS_NOT_FOUND: "No materials found for this course",
@@ -23,69 +25,65 @@ const getStudentCourses = async (req, res) => {
   }
 };
 
-// Get course materials
-const getCourseMaterials = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-    res.status(200).json(course.materials || []);
-  } catch (error) {
-    console.error("Get Course Materials Error:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
 
-// Submit an assessment
-const submitAssessment = async (req, res) => {
-  try {
-    const { courseId, assessmentId } = req.params;
-    const { fileUrl } = req.body;
-    const studentId = req.user._id;
 
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: ERROR_MESSAGES.COURSE_NOT_FOUND });
-
-    const assessment = course.assessments.id(assessmentId);
-    if (!assessment) return res.status(404).json({ message: ERROR_MESSAGES.ASSESSMENT_NOT_FOUND });
-
-    // Push the student's submission
-    assessment.studentSubmissions.push({ student: studentId, fileUrl, submittedAt: Date.now() });
-    await course.save();
-
-    res.status(201).json({ message: ERROR_MESSAGES.ASSESSMENT_SUBMITTED, assessment });
-  } catch (error) {
-    console.error("Submit Assessment Error:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-// View grades for all assessments
 const viewGrades = async (req, res) => {
+  console.log(req.user);
   try {
-    const studentId = req.user._id;
-    const courses = await Course.find({ studentsEnrolled: studentId });
+    const studentId = req.user._id; // Extract student ID from authenticated user
 
-    const grades = courses.flatMap(course =>
-      course.assessments.map(assessment => {
-        const submission = assessment.studentSubmissions.find(sub => sub.student.toString() === studentId);
-        return {
-          courseName: course.courseName,
-          assessmentTitle: assessment.title,
-          score: submission ? submission.score : "Not graded yet",
-        };
-      })
-    );
+    // Fetch student details
+    const student = await User.findById(studentId).select("firstName lastName");
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
 
-    res.status(200).json(grades.length ? grades : { message: ERROR_MESSAGES.GRADES_NOT_FOUND });
+    // Find courses enrolled by the student
+    const enrolledCourses = await Course.find({ studentsEnrolled: studentId })
+      .select("courseName courseCode")
+      .lean();
+
+    if (!enrolledCourses.length) {
+      return res.status(404).json({ message: "No enrolled courses found." });
+    }
+
+    // Fetch all assessments where the student has grades
+    const assessments = await Assessment.find({ "studentResults.student": studentId })
+      .populate("course", "courseName courseCode")
+      .lean();
+
+    // Map assessments to display student grades per course
+    const grades = assessments.map((assessment) => {
+      const studentResult = assessment.studentResults.find((result) =>
+        result.student.toString() === studentId.toString()
+      );
+
+      return {
+        courseId: assessment.course._id,
+        courseName: assessment.course.courseName,
+        courseCode: assessment.course.courseCode,
+        assignmentScore: studentResult.assignmentScore,
+        examScore: studentResult.examScore,
+        finalScore: studentResult.finalScore,
+      };
+    });
+
+    return res.status(200).json({
+      student: {
+        id: studentId,
+        firstName: student.firstName,
+        lastName: student.lastName,
+      },
+      enrolledCourses,
+      grades,
+    });
   } catch (error) {
-    console.error("View Grades Error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching student grades:", error);
+    return res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
-
 // Generate certificate QR code
-const certificate = async (req, res) => {
+const getcerteficate = async (req, res) => {
   try {
     const { studentId } = req.params;
     const student = await Course.findOne({ studentsEnrolled: studentId }).populate("studentsEnrolled");
@@ -107,11 +105,29 @@ const certificate = async (req, res) => {
     res.status(500).json({ message: ERROR_MESSAGES.QR_GENERATION_ERROR });
   }
 };
+const submitFeedback = async (req, res) => {
+  console.log(req.body);
+  try {
+    const { comment } = req.body; // Only extract existing fields
+    const student = req.user._id; // Get student ID from authentication
+
+    if (!comment) {
+      return res.status(400).json({ message: "Comment is required." });
+    }
+
+    const feedback = new Feedback({ student, comment });
+    await feedback.save();
+
+    res.status(201).json({ message: "Feedback submitted successfully.", feedback });
+  } catch (error) {
+    console.error("Error submitting feedback:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
 
 module.exports = {
   getStudentCourses,
-  getCourseMaterials,
-  submitAssessment,
   viewGrades,
-  certificate,
+  getcerteficate,
+  submitFeedback
 };

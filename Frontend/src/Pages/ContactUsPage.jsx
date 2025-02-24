@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 const ContactUsPage = () => {
-  // State to hold form data
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -9,21 +9,26 @@ const ContactUsPage = () => {
     message: ""
   });
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevState => ({ ...prevState, [name]: value }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate fields
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast.error("All fields are required!");
+      return;
+    }
+
     try {
-      alert('Message sent successfully!');
-      setFormData({ name: '', email: '', subject: '', message: '' }); // Reset form after submission
+      toast.success('Message sent successfully!');
+      setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
       console.error("Error sending message: ", error);
-      alert('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     }
   };
 
@@ -35,7 +40,6 @@ const ContactUsPage = () => {
       </div>
 
       <div className="flex justify-center items-center space-x-8">
-        {/* Left side: Image */}
         <div className="w-1/2">
           <img 
             src="https://via.placeholder.com/400x400" 
@@ -44,10 +48,8 @@ const ContactUsPage = () => {
           />
         </div>
 
-        {/* Right side: Contact Form */}
         <div className="w-1/2 max-w-lg p-6 bg-white border border-blue-300 rounded-lg shadow-lg">
           <form onSubmit={handleSubmit}>
-            {/* Name and Email Fields */}
             <div className="mb-4">
               <input
                 type="text"
@@ -56,7 +58,6 @@ const ContactUsPage = () => {
                 className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.name}
                 onChange={handleChange}
-                required
               />
             </div>
             <div className="mb-4">
@@ -67,11 +68,8 @@ const ContactUsPage = () => {
                 className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.email}
                 onChange={handleChange}
-                required
               />
             </div>
-
-            {/* Subject Field */}
             <div className="mb-4">
               <input
                 type="text"
@@ -80,11 +78,8 @@ const ContactUsPage = () => {
                 className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.subject}
                 onChange={handleChange}
-                required
               />
             </div>
-
-            {/* Message Field */}
             <div className="mb-4">
               <textarea
                 name="message"
@@ -93,11 +88,9 @@ const ContactUsPage = () => {
                 className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.message}
                 onChange={handleChange}
-                required
               />
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full"

@@ -10,7 +10,6 @@ const Layout = () => {
       <main className="flex-1">
         <Outlet /> {/* This will render the nested routes */}
       </main>
-      <Footer /> {/* Footer will naturally stay at the bottom */}
     </div>
   );
 };

@@ -190,6 +190,25 @@ const requestPasswordReset = async (req, res) => {
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+const updatePassword = async (req, res) => {
+  const {oldPassword,newpassword,email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const isMatch = await user.comparePassword(oldPassword)
+    if(!isMatch){
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    user.password = newpassword;
+    await user.save();
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Update Password Error:', error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+};
 
 // Reset Password
 const resetPassword = async (req, res) => {
@@ -222,5 +241,5 @@ module.exports = {
   getProfile,
   getAllUser,
   requestPasswordReset,
-  resetPassword
+  resetPassword,updatePassword
 };

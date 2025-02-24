@@ -19,6 +19,9 @@ import SettingsPage from "./Pages/SettingsPage";
 import LoadingSpinner from "./Components/LoadingSpinner";
 import CourseManagement from "./Dashboard/Admin/CourseManagement";
 import ResetPassword from "./Pages/ResetPassword";
+import FeedbackList from "./Dashboard/Admin/FeedbackList";
+import ContactMessages from "./Dashboard/Admin/ContactMessages";
+import Footer from "./Components/Footer";
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
@@ -51,13 +54,17 @@ function App() {
               <Route path="profile" element={<Profile />} />
               <Route path="courses" element={<CourseManagement />} />
               <Route path="assessments" element={<AssessmentManagement />} />
+              <Route path="feedback" element={<FeedbackList />} />
+              <Route path="contactUs" element={<ContactMessages />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
           ) : (
             <Route path="*" element={<Navigate to="/login" replace />} />
           )}
         </Route>
+        
       </Routes>
+      <Footer />
       <Toaster />
     </div>
   );

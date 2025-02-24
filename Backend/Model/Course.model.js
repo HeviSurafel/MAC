@@ -4,9 +4,10 @@ const courseSchema = mongoose.Schema({
   courseName: { type: String, required: true },
   courseCode: { type: String, required: true, unique: true },
   description: { type: String, required: true },
+  courseStatus: { type: String, enum: ['completed', 'incomplete'], default: 'incomplete' },
   instructors: [{ 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Instructor', 
+    ref: 'User', 
     default: null // Allow null if no instructor is assigned
   }],
   studentsEnrolled: [{

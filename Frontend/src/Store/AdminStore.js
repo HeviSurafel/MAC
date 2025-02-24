@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 
 const useAdminStore = create((set, get) => ({
   users: [],
+  feedbacks:null,
   courses: [],
   instructors: [],
   user: null,
@@ -72,14 +73,17 @@ const useAdminStore = create((set, get) => ({
       (data) => set({ user: data })
     ),
 
-  getCourses: () =>
-    get().handleRequest(
-      () => axios.get("/courses"),
-      null,
-      "Failed to fetch courses.",
-      (data) => set({ courses: data })
-    ),
-
+    getCourses: (courseId = "", section = "") =>
+      get().handleRequest(
+        () =>
+          axios.get("/courses", {
+            params: { courseId, section }, // ✅ Send query parameters correctly
+          }),
+        null,
+        "Failed to fetch courses.",
+        (data) => set({ courses: data })
+      ),
+   
   createCourse: (courseData) =>
     get().handleRequest(
       () => axios.post("/courses", courseData),
@@ -106,6 +110,15 @@ const useAdminStore = create((set, get) => ({
       "Failed to delete course.",
       () => set({ courses: get().courses.filter((course) => course._id !== id) })
     );
+  },
+  fetchFeedbacks: async () => {
+    try {
+      const response = await axios.get("/student/feedback");
+      set({ feedbacks: response.data }); // ✅ Ensure you're setting the actual data
+      toast.success("Feedback fetched successfully"); // ✅ Ensure toast message is a string
+    } catch (error) {
+      toast.error("Failed to fetch feedback.");
+    }
   },
 
   getAllInstructors: () =>

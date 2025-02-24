@@ -14,13 +14,15 @@ const Sidebar = () => {
     { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile" },
     { path: "/dashboard/courses", icon: <FaBook />, label: "Courses" },
     { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments" },
-    { path: "/dashboard/instructor", icon: <FaUsers />, label: "Instructor" },
+    { path: "/dashboard/feedback", icon: <FaBook />, label: "Feeback" },
+    { path: "/dashboard/contactUs", icon: <FaBook />, label: "ContactUs" },
     { path: "/dashboard/settings", icon: <FaCog />, label: "Settings" },
   ];
 
-  // Add Feedback only if the user is a student
+  // Add Feedback and contact us message only if the user is a student
   if (user?.role === "student") {
     links.push({ path: "/dashboard/feedback", icon: <FaBook />, label: "Feedback" });
+    links.push({ path: "/dashboard/contactUs", icon: <FaBook />, label: "ContactUs" });
   }
 
   return (

@@ -69,6 +69,14 @@ export const useUserStore = create(
           toast.error(error.response?.data?.message || "Reset failed");
         }
       },
+      updatePassword: async (oldPassword,newpassword,email) => {
+        try {
+          await axios.put("/auth/update-password", { email,oldPassword,newpassword });
+          toast.success("Password updated");
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Update failed");
+        }
+      },
 
       refreshToken: async () => {
         if (get().checkingAuth) return;

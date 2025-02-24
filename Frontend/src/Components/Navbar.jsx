@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaBars, FaTimes, FaCaretDown } from "react-icons/fa";
-import logo from "../assets/image01.jpg";
+import logo from "../assets/Makalla Code Acadamey-01.jpg";
 
 const Navbar = () => {
   const [user, setUser] = useState(null);

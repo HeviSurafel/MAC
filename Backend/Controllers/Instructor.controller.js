@@ -1,86 +1,58 @@
 const Course = require("../Model/Course.model");
 const Section = require("../Model/Section.model");
 const Assessment = require("../Model/Assessment.model");
-
-const getCourseStudentsBySection = async (req, res) => {
+const generateCertificatePDF = require("../config/generateCertificatePDF");
+const Certificate = require("../Model/Certeficate.model");
+const markCourseAsCompleted = async (req, res) => {
   try {
-    const { courseId, selectedSection } = req.params;
+    const { courseId, section } = req.params;
+    const { status } = req.body;
 
-    // Find the section
-    const sectionData = await Section.findOne({ course: courseId, section: selectedSection })
-      .populate({
-        path: "students",
-        select: "firstName lastName email studentId",
-      });
+    if (!courseId || !section || !status) {
+      return res.status(400).json({ message: "Invalid request parameters." });
+    }
 
+    const sectionData = await Section.findOne({ course: courseId, section });
     if (!sectionData) {
       return res.status(404).json({ message: "Section not found." });
     }
 
-    if (!sectionData.students || sectionData.students.length === 0) {
-      return res.status(404).json({ message: "No students found in this section." });
-    }
+    sectionData.status = status; // "completed"
+    await sectionData.save();
 
-    // Find the assessment for this course and section
-    const assessment = await Assessment.findOne({ course: courseId, section: sectionData._id });
-
-    if (!assessment) {
-      return res.status(404).json({ message: "No assessment found for this section." });
-    }
-
-    // Map students and merge assessment results
-    const studentsWithAssessment = sectionData.students.map((student) => {
-      const studentAssessment = assessment.studentResults.find(
-        (sr) => sr.student.toString() === student._id.toString()
-      );
-
-      return {
-        _id: student._id,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        email: student.email,
-        studentId: student.studentId,
-        examWeight: assessment.examWeight,
-        assignmentWeight: assessment.assignmentWeight,
-        finalWeight: assessment.finalWeight,
-      };
-    });
-
-    res.status(200).json(studentsWithAssessment);
+    res
+      .status(200)
+      .json({ message: "Course section marked as completed.", sectionData });
   } catch (error) {
-    console.error("Error fetching students with assessment data:", error);
+    console.error("Error marking course as completed:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
-
-// Get instructor's courses and students
 const getInstructorCoursesAndStudents = async (req, res) => {
   try {
     const instructorId = req.user._id;
-
-    // Find all sections where the instructor is assigned
     const sections = await Section.find({ instructors: instructorId })
       .populate({
         path: "course",
-        select: "courseName courseCode",
+        select: "courseName courseCode courseStatus",
       })
       .populate({
         path: "students",
-        select: "firstName lastName email",
+        select: "firstName lastName email studentId",
       });
-
-    if (!sections || sections.length === 0) {
-      return res.status(404).json({ message: "No sections found for this instructor." });
+   
+    if (!sections.length) {
+      return res
+        .status(404)
+        .json({ message: "No sections found for this instructor." });
     }
 
-    // Format response
     const coursesWithStudents = sections.map((section) => ({
       courseId: section.course._id,
       courseName: section.course.courseName,
       section: section.section,
-      students: section.students.map(student => ({
+      students: section.students.map((student) => ({
         studentId: student._id,
         firstName: student.firstName,
         lastName: student.lastName,
@@ -95,18 +67,75 @@ const getInstructorCoursesAndStudents = async (req, res) => {
   }
 };
 
-// Grade an assessment for a specific student
-
-const updateAssessment = async (req, res) => {
+const getCourseStudentsBySection = async (req, res) => {
   try {
-    console.log("Request Params:", req.params);
-    console.log("Request Body:", req.body);
-
-    const { studentId, assignmentWeight, examWeight, finalWeight } = req.body;
     const { courseId, section } = req.params;
-
     if (!courseId || !section) {
-      return res.status(400).json({ message: "Missing courseId or section in the request." });
+      return res
+        .status(400)
+        .json({ message: "Course ID and section are required." });
+    }
+
+    const sectionData = await Section.findOne({
+      course: courseId,
+      section: section,
+    }).populate({
+      path: "students",
+      select: "firstName lastName email studentId",
+    });
+
+    if (!sectionData) {
+      return res.status(404).json({ message: "Section not found." });
+    }
+
+    const assessment = await Assessment.findOne({
+      course: courseId,
+      section: sectionData._id,
+    });
+    if (!assessment) {
+      return res
+        .status(404)
+        .json({ message: "No assessment found for this section." });
+    }
+
+    const studentsWithAssessment = sectionData.students.map((student) => {
+      const studentAssessment = assessment.studentResults.find(
+        (sr) => sr.student.toString() === student._id.toString()
+      );
+
+      return {
+        _id: student._id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        studentId: student.studentId,
+        examWeight: assessment.examWeight,
+        assignmentWeight: assessment.assignmentWeight,
+        finalWeight: assessment.finalWeight,
+        assignmentScore: studentAssessment?.assignmentScore || 0,
+        examScore: studentAssessment?.examScore || 0,
+        finalScore: studentAssessment?.finalScore || 0,
+      };
+    });
+
+    res.status(200).json({
+      course: courseId,
+      section: section,
+      students: studentsWithAssessment,
+    });
+  } catch (error) {
+    console.error("Error fetching students by course and section:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const updateAllAssessments = async (req, res) => {
+  try {
+    const { courseId, section } = req.params;
+    const { assessments } = req.body;
+
+    if (!courseId || !section || !Array.isArray(assessments)) {
+      return res.status(400).json({ message: "Invalid request parameters." });
     }
 
     const sectionData = await Section.findOne({ course: courseId, section });
@@ -114,34 +143,140 @@ const updateAssessment = async (req, res) => {
       return res.status(404).json({ message: "Section not found." });
     }
 
-    let assessment = await Assessment.findOne({ course: courseId, section: sectionData._id });
+    let assessment = await Assessment.findOne({
+      course: courseId,
+      section: sectionData._id,
+    });
     if (!assessment) {
       return res.status(404).json({ message: "Assessment not found." });
     }
 
-    let studentAssessment = assessment.studentResults.find(
-      (sr) => sr.student.toString() === studentId
+    assessment.studentResults = assessment.studentResults.map(
+      (studentAssessment) => {
+        let updatedStudent = assessments.find(
+          (s) => s.studentId === studentAssessment.student.toString()
+        );
+        if (updatedStudent) {
+          studentAssessment.assignmentScore =
+            Number(updatedStudent.assignmentScore) || 0;
+          studentAssessment.examScore = Number(updatedStudent.examScore) || 0;
+          studentAssessment.finalScore = Number(updatedStudent.finalScore) || 0;
+        }
+        return studentAssessment;
+      }
     );
 
-    if (!studentAssessment) {
-      return res.status(404).json({ message: "Student assessment not found." });
-    }
-
-    studentAssessment.assignmentWeight = assignmentWeight;
-    studentAssessment.examWeight = examWeight;
-    studentAssessment.finalWeight = finalWeight;
-
     await assessment.save();
-    res.status(200).json({ message: "Assessment updated successfully", assessment });
+    res
+      .status(200)
+      .json({ message: "Assessments updated successfully", assessment });
   } catch (error) {
-    console.error("Error updating assessment:", error);
+    console.error("Error updating assessments:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
+const generateCertificates = async (req, res) => {
+  try {
+    console.log(req.params);
+    const { courseId } = req.params; // Get courseId from URL
+    const { students } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ message: "Course ID is required." });
+    }
+
+    if (!students || students.length === 0) {
+      return res.status(400).json({ message: "No students provided." });
+    }
+
+    // Fetch course details to get the course name
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found." });
+    }
+
+    // Generate certificates for students
+    const certificates = await Promise.all(
+      students.map(async (student) => {
+        // Check if a certificate already exists for this student and course
+        const existingCertificate = await Certificate.findOne({
+          student: student._id,
+          course: courseId,
+        });
+
+        if (existingCertificate) {
+          console.log(
+            `Certificate already exists for student ${student._id} in course ${courseId}`
+          );
+          return null; // Skip generating a new certificate
+        }
+
+        // Generate a new certificate
+        const certificateId = `CERT-${Date.now()}-${student._id}`;
+        const verificationUrl = `https://yourdomain.com/verify/${certificateId}`;
+        const pdfFilePath = await generateCertificatePDF(
+          `${student.firstName} ${student.lastName}`,
+          course.courseName, // Use courseName from the database
+          certificateId,
+          verificationUrl
+        );
+
+        return new Certificate({
+          student: student._id,
+          course: courseId, // Use courseId from params
+          certificateId,
+          qrCode: verificationUrl,
+          pdfPath: pdfFilePath,
+        });
+      })
+    );
+
+    // Filter out null values (skipped certificates)
+    const validCertificates = certificates.filter((cert) => cert !== null);
+
+    // Save only the new certificates
+    if (validCertificates.length > 0) {
+      await Certificate.insertMany(validCertificates);
+
+      // ✅ Update course status to "completed"
+      course.courseStatus = "completed";
+      await course.save();
+    }
+
+    res
+      .status(200)
+      .json({
+        message: "Certificates generated successfully!",
+        certificates: validCertificates,
+      });
+  } catch (error) {
+    console.error("Error generating certificates:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getCourseStatus = async (req, res) => {
+  try {
+    const { courseId, section } = req.params;
+
+    const sectionData = await Section.findOne({ course: courseId, section });
+    if (!sectionData) {
+      return res.status(404).json({ message: "Section not found." });
+    }
+
+    res.status(200).json({ status: sectionData.status });
+  } catch (error) {
+    console.error("Error fetching course status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 module.exports = {
-  updateAssessment,
+  getCourseStatus,
+  markCourseAsCompleted,
+  generateCertificates,
+  updateAllAssessments,
   getCourseStudentsBySection,
   getInstructorCoursesAndStudents,
 };
