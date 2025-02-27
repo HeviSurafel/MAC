@@ -28,7 +28,7 @@ const useStudentStore = create((set) => ({
     try {
       set({ loading: true, error: null });
       const response = await axios.get(
-        `/api/student/certificate/${studentId}`,
+        `/student/certificate/${studentId}`,
         { responseType: "blob" }
       );
 

@@ -1,101 +1,109 @@
-import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import React, { useState } from "react";
+import { toast } from "react-hot-toast";
+import { useUserStore } from "../Store/useAuthStore";
+import makalla from "../assets/makala man.JPG";
 
 const ContactUsPage = () => {
+  const { contactUs, loading } = useUserStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
-    message: ""
+    message: "",
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({ ...prevState, [name]: value }));
+    setFormData((prevState) => ({
+      ...prevState,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate fields
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {
       toast.error("All fields are required!");
       return;
     }
-
-    try {
-      toast.success('Message sent successfully!');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (error) {
-      console.error("Error sending message: ", error);
-      toast.error('Something went wrong. Please try again.');
-    }
+    const response = await contactUs(formData.name, formData.email, formData.subject, formData.message);
+    console.log(response);
   };
 
   return (
-    <div className="container mx-auto p-8 bg-white">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-blue-600">Get in Touch</h2>
-        <p className="text-lg text-blue-500">We'd love to hear from you! Fill out the form below.</p>
+    <div className="container mx-auto px-6 py-18 bg-white">
+      {/* Header Section */}
+      <div className="text-center mb-10">
+        <h2 className="text-4xl font-bold text-blue-700">Get in Touch</h2>
+        <p className="text-lg text-gray-600 mt-2">
+          We'd love to hear from you! Fill out the form below and we’ll get back to you soon.
+        </p>
       </div>
 
-      <div className="flex justify-center items-center space-x-8">
-        <div className="w-1/2">
+      {/* Content Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+        {/* Image Section */}
+        <div className="flex justify-center">
           <img 
-            src="https://via.placeholder.com/400x400" 
+            src={makalla} 
             alt="Contact Us" 
-            className="rounded-lg shadow-lg"
+            className="rounded-lg shadow-lg w-full max-w-md object-cover"
           />
         </div>
 
-        <div className="w-1/2 max-w-lg p-6 bg-white border border-blue-300 rounded-lg shadow-lg">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
+        {/* Form Section */}
+        <div className="bg-white p-8 border border-gray-200 rounded-xl shadow-lg">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
               <input
                 type="text"
                 name="name"
                 placeholder="Your Name"
-                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 value={formData.name}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
-            <div className="mb-4">
+            <div>
               <input
                 type="email"
                 name="email"
                 placeholder="Your Email"
-                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 value={formData.email}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
-            <div className="mb-4">
+            <div>
               <input
                 type="text"
                 name="subject"
                 placeholder="Subject"
-                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 value={formData.subject}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
-            <div className="mb-4">
+            <div>
               <textarea
                 name="message"
-                rows="5"
+                rows="4"
                 placeholder="How can we help?"
-                className="w-full p-4 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 value={formData.message}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-200"
+              disabled={loading}
             >
-              Send Message
+              {loading ? "Sending..." : "Send Message"}
             </button>
           </form>
         </div>

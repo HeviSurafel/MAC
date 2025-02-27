@@ -51,6 +51,7 @@ const getInstructorCoursesAndStudents = async (req, res) => {
     const coursesWithStudents = sections.map((section) => ({
       courseId: section.course._id,
       courseName: section.course.courseName,
+      courseStatus: section.course.courseStatus,
       section: section.section,
       students: section.students.map((student) => ({
         studentId: student._id,
@@ -178,53 +179,43 @@ const updateAllAssessments = async (req, res) => {
 
 const generateCertificates = async (req, res) => {
   try {
-    console.log(req.params);
-    const { courseId } = req.params; // Get courseId from URL
+    const { courseId } = req.params;
     const { students } = req.body;
 
-    if (!courseId) {
-      return res.status(400).json({ message: "Course ID is required." });
-    }
+    if (!courseId) return res.status(400).json({ message: "Course ID is required." });
+    if (!students || students.length === 0) return res.status(400).json({ message: "No students provided." });
 
-    if (!students || students.length === 0) {
-      return res.status(400).json({ message: "No students provided." });
-    }
-
-    // Fetch course details to get the course name
     const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: "Course not found." });
-    }
+    if (!course) return res.status(404).json({ message: "Course not found." });
 
-    // Generate certificates for students
     const certificates = await Promise.all(
       students.map(async (student) => {
-        // Check if a certificate already exists for this student and course
-        const existingCertificate = await Certificate.findOne({
-          student: student._id,
-          course: courseId,
+        const existingCertificate = await Certificate.findOne({ student: student._id, course: courseId });
+
+        if (existingCertificate) return null;
+
+        const certificateId = `CERT-${Date.now()}-${student._id}`;
+        const verificationUrl = `https://makalla.com/verify/${certificateId}`;
+
+        const qrCodeData = JSON.stringify({
+          studentId: student._id,
+          name: `${student.firstName} ${student.lastName}`,
+          course: course.courseName,
+          certificateId,
+          verificationUrl,
         });
 
-        if (existingCertificate) {
-          console.log(
-            `Certificate already exists for student ${student._id} in course ${courseId}`
-          );
-          return null; // Skip generating a new certificate
-        }
-
-        // Generate a new certificate
-        const certificateId = `CERT-${Date.now()}-${student._id}`;
-        const verificationUrl = `https://yourdomain.com/verify/${certificateId}`;
         const pdfFilePath = await generateCertificatePDF(
+          student._id,
           `${student.firstName} ${student.lastName}`,
-          course.courseName, // Use courseName from the database
+          course.courseName,
           certificateId,
-          verificationUrl
+          qrCodeData
         );
 
         return new Certificate({
           student: student._id,
-          course: courseId, // Use courseId from params
+          course: courseId,
           certificateId,
           qrCode: verificationUrl,
           pdfPath: pdfFilePath,
@@ -232,29 +223,20 @@ const generateCertificates = async (req, res) => {
       })
     );
 
-    // Filter out null values (skipped certificates)
     const validCertificates = certificates.filter((cert) => cert !== null);
-
-    // Save only the new certificates
     if (validCertificates.length > 0) {
       await Certificate.insertMany(validCertificates);
-
-      // ✅ Update course status to "completed"
       course.courseStatus = "completed";
       await course.save();
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Certificates generated successfully!",
-        certificates: validCertificates,
-      });
+    res.status(200).json({ message: "Certificates generated successfully!", certificates: validCertificates });
   } catch (error) {
     console.error("Error generating certificates:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 const getCourseStatus = async (req, res) => {
   try {

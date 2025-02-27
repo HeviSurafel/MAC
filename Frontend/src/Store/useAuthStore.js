@@ -7,6 +7,7 @@ export const useUserStore = create(
   persist(
     (set, get) => ({
       user: null,
+      contacts:null,
       loading: false,
       checkingAuth: false,
 
@@ -37,7 +38,18 @@ export const useUserStore = create(
           set({ loading: false });
         }
       },
-
+      updateProfile:async(address,phone)=>{
+        set({ loading: true });
+        try {
+          const { data } = await axios.put("/auth/updateprofile", {phone,address});
+          set({ user: data });
+          toast.success("Profile updated successfully");
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Update failed");
+        } finally {
+          set({ loading: false });
+        } 
+      },
       logout: async () => {
         try {
           await axios.post("/auth/logout");
@@ -92,6 +104,44 @@ export const useUserStore = create(
           set({ checkingAuth: false });
         }
       },
+      contactUs: async (name, email, subject, message) => {
+        set({ loading: true, success: false, error: null });
+    
+        try {
+          const response = await axios.post("/auth/contactUs", {
+            name,
+            email,
+            subject,
+            message,
+          });
+    
+          set({ success: true, loading: false });
+          toast.success("Message sent successfully");
+          return response.data; // Return response if needed
+        } catch (error) {
+          set({
+            error: error.response?.data?.error || "Something went wrong!",
+            loading: false,
+          });
+        }
+      },
+      deleteContactUs: async (_id) => {
+        try {
+          await axios.delete(`/delete/contact/${_id}`);
+          toast.success("Message successfully deleted");
+        } catch (error) {
+          return error.response?.data?.error || "Something went wrong!";
+        }
+      },
+      getContactUs: async () => {
+        try {
+          const response = await axios.get("/contact");
+        set({ contacts: response.data });
+     // Return response if needed
+        } catch (error) {
+          return error.response?.data?.error || "Something went wrong!";
+        }
+      }
     }),
     {
       name: "user",

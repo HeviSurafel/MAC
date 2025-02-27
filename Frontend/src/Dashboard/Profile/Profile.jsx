@@ -1,12 +1,23 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ProfileSection from "./ProfileSection";
 import PersonalInfoSection from "./PersonalInfoSection";
 import AddressSection from "./AddressSection";
 import EditModal from "./EditModal";
+import { useUserStore } from "../../Store/useAuthStore";
+import useStudentStore from "../../Store/student.store";
 
 const Profile = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [sectionToEdit, setSectionToEdit] = useState("");
+  const { user } = useUserStore();
+  const { certificate, fetchCertificate } = useStudentStore();
+
+  useEffect(() => {
+    fetchCertificate(user.id);
+  }, []);
+
+  console.log("User:", user);
+  console.log("Certificate URL:", certificate);
 
   const handleEdit = (section) => {
     setSectionToEdit(section);
@@ -26,20 +37,42 @@ const Profile = () => {
                 My Profile
               </h2>
               {/* Profile, Personal Info, and Address Sections */}
-              <ProfileSection onEdit={() => handleEdit("profile")} />
-              <PersonalInfoSection onEdit={() => handleEdit("personal")} />
+              <ProfileSection />
+              <PersonalInfoSection />
               <AddressSection onEdit={() => handleEdit("address")} />
-              
-              {/* Modal for editing sections */}
               {isModalOpen && (
-                <EditModal section={sectionToEdit} closeModal={closeModal} />
+                <EditModal
+                  section={sectionToEdit}
+                  user={user}
+                  closeModal={closeModal}
+                />
+              )}
+
+              {/* ✅ Fix: Display PDF certificate correctly */}
+              {certificate && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    My Certificate
+                  </h3>
+                  <iframe
+                    src={certificate}
+                    title="Certificate"
+                    className="w-full h-96 border rounded-lg shadow-md"
+                  ></iframe>
+
+                  {/* Download Button */}
+                  <a
+                    href={certificate}
+                    download="certificate.pdf"
+                    className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
+                  >
+                    Download Certificate
+                  </a>
+                </div>
               )}
             </div>
           </div>
         </div>
-        
-        {/* Add any additional sections or information you want to display here */}
-        
       </div>
     </div>
   );

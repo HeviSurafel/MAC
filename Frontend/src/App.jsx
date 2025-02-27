@@ -33,38 +33,40 @@ function App() {
   // if (checkingAuth) return <LoadingSpinner />;
 
   return (
-    <div>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/contact" element={<ContactUsPage />} />
-          <Route path="/about" element={<AboutUsPage />} />
-          <Route path="/services" element={<ServicePage />} />
-          {user ? (
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<DashboardOverview />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="instructor" element={<InstructorsPage />} />
-              {user.role === "student" && (
-                <Route path="feedback" element={<FeedbackPage />} />
-              )}
-              <Route path="profile" element={<Profile />} />
-              <Route path="courses" element={<CourseManagement />} />
-              <Route path="assessments" element={<AssessmentManagement />} />
-              <Route path="feedback" element={<FeedbackList />} />
-              <Route path="contactUs" element={<ContactMessages />} />
-              <Route path="settings" element={<SettingsPage />} />
-            </Route>
-          ) : (
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          )}
-        </Route>
-        
-      </Routes>
-      <Footer />
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/contact" element={<ContactUsPage />} />
+            <Route path="/about" element={<AboutUsPage />} />
+            <Route path="/services" element={<ServicePage />} />
+            {user ? (
+              <Route path="/dashboard" element={<DashboardLayout />}>
+                <Route index element={<DashboardOverview />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="instructor" element={<InstructorsPage />} />
+                {user.role === "student" && (
+                  <Route path="feedback" element={<FeedbackPage />} />
+                )}
+                <Route path="profile" element={<Profile />} />
+                <Route path="courses" element={<CourseManagement />} />
+                <Route path="assessments" element={<AssessmentManagement />} />
+                <Route path="feedback" element={<FeedbackList />} />
+                <Route path="contactUs" element={<ContactMessages />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
+            ) : (
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            )}
+          </Route>
+        </Routes>
+      
+      </div>
+      <Footer className="w-full bg-gradient-to-r from-blue-600 to-teal-500 py-10 px-6 mt-auto" />
       <Toaster />
     </div>
   );

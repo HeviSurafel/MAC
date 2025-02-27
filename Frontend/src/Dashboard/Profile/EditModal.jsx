@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-
-const EditModal = ({ section, closeModal }) => {
+import {useUserStore} from "../../Store/useAuthStore"
+const EditModal = ({ section, closeModal, user }) => {
   const [formData, setFormData] = useState({
-    firstName: 'Jack',
-    lastName: 'Adams',
-    email: 'jackadams@gmail.com',
-    phone: '(213) 555-1234',
-    address: 'United States of America, California, USA',
-    postalCode: 'ERT 62574',
-    taxId: 'A8564178969',
+    address: user?.address,
+    phone: user?.phone,
   });
-
+const {updateProfile}=useUserStore()
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -19,7 +14,7 @@ const EditModal = ({ section, closeModal }) => {
   };
 
   const handleSave = () => {
-    // Handle save logic
+    updateProfile(formData);
     closeModal();
   };
 
@@ -28,34 +23,6 @@ const EditModal = ({ section, closeModal }) => {
       <div className="bg-white p-6 rounded-lg w-96">
         <h2 className="text-lg font-semibold">{`Edit ${section}`}</h2>
         <form>
-          {section === 'personal' && (
-            <>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="block w-full p-2 mt-4"
-                placeholder="First Name"
-              />
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="block w-full p-2 mt-4"
-                placeholder="Last Name"
-              />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="block w-full p-2 mt-4"
-                placeholder="Email Address"
-              />
-            </>
-          )}
           {section === 'address' && (
             <>
               <input
@@ -69,15 +36,19 @@ const EditModal = ({ section, closeModal }) => {
               <input
                 type="text"
                 name="postalCode"
-                value={formData.postalCode}
-                onChange={handleChange}
+                value={new Date(user?.dateOfBirth).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                disabled
                 className="block w-full p-2 mt-4"
                 placeholder="Postal Code"
               />
               <input
-                type="text"
-                name="taxId"
-                value={formData.taxId}
+                type="phoneNumber"
+                name="phoneNumber"
+                value={formData.phone}
                 onChange={handleChange}
                 className="block w-full p-2 mt-4"
                 placeholder="Tax ID"

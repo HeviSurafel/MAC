@@ -1,12 +1,12 @@
 import React from 'react';
 import { FaTools, FaRocket, FaShieldAlt, FaRegClock } from 'react-icons/fa';
-
+import {Link} from "react-router-dom"
 const ServicePage = () => {
   return (
     <div className="bg-gray-50">
 
       {/* Hero Section */}
-      <section className="relative bg-cover bg-center h-screen text-white" style={{ backgroundImage: 'url(https://via.placeholder.com/1920x1080)' }}>
+      <section className="relative bg-cover bg-center h-screen text-white" style={{ backgroundImage: 'url()' }}>
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6 text-center flex items-center justify-center h-full">
           <div className="text-center">
@@ -33,7 +33,7 @@ const ServicePage = () => {
             <div className="text-indigo-600 text-4xl mb-6">
               <FaTools />
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Custom Development</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Web Development</h3>
             <p className="text-gray-600">Tailored software solutions designed to meet the unique needs of your business, built with scalability and flexibility in mind.</p>
           </div>
 
@@ -42,7 +42,7 @@ const ServicePage = () => {
             <div className="text-teal-600 text-4xl mb-6">
               <FaRocket />
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Digital Marketing</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Social Media Verification</h3>
             <p className="text-gray-600">Boost your online presence with our cutting-edge digital marketing strategies to increase traffic, engagement, and conversions.</p>
           </div>
 
@@ -51,7 +51,7 @@ const ServicePage = () => {
             <div className="text-green-600 text-4xl mb-6">
               <FaShieldAlt />
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Cybersecurity</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Acadamy Service</h3>
             <p className="text-gray-600">Protect your business from digital threats with our comprehensive cybersecurity services and proactive threat mitigation.</p>
           </div>
 
@@ -60,7 +60,7 @@ const ServicePage = () => {
             <div className="text-orange-600 text-4xl mb-6">
               <FaRegClock />
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">24/7 Support</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">App Development</h3>
             <p className="text-gray-600">Our expert team is available around the clock to provide you with ongoing support, ensuring your systems are always running smoothly.</p>
           </div>
 
@@ -92,7 +92,7 @@ const ServicePage = () => {
         <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
         <p className="text-lg mb-8">Let’s work together to create something amazing for your business. Get in touch today to discuss your project!</p>
         <button className="bg-white text-teal-600 px-8 py-3 rounded-full font-bold text-lg transition-transform transform hover:scale-105 hover:bg-teal-700">
-          Contact Us
+         <Link to={"/contact"} >contact</Link>
         </button>
       </section>
 

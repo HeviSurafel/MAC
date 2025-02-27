@@ -115,9 +115,17 @@ const useAdminStore = create((set, get) => ({
     try {
       const response = await axios.get("/student/feedback");
       set({ feedbacks: response.data }); // ✅ Ensure you're setting the actual data
-      toast.success("Feedback fetched successfully"); // ✅ Ensure toast message is a string
+      // ✅ Ensure toast message is a string
     } catch (error) {
       toast.error("Failed to fetch feedback.");
+    }
+  },
+  deleteFeedback: async (_id) => {
+    try {
+      await axios.delete(`/student/feedback/delete/${_id}`);
+      toast.success("Feedback successfully deleted");
+    } catch (error) {
+      return error.response?.data?.error || "Something went wrong!";
     }
   },
 

@@ -3,7 +3,7 @@ import { toast } from "react-hot-toast";
 import { FaCheck, FaTrash } from "react-icons/fa";
 import useAdminStore from "../../Store/AdminStore";
 const FeedbackList = () => {
-  const { feedbacks, fetchFeedbacks } = useAdminStore();
+  const { feedbacks, fetchFeedbacks,deleteFeedback } = useAdminStore();
   useEffect(() => {
     fetchFeedbacks();
   }, []);
@@ -13,8 +13,8 @@ const FeedbackList = () => {
     toast.success("Marked as read");
   };
 
-  const deleteFeedback = (id) => {
-    // setFeedbacks(feedbacks.filter((f) => f.id !== id));
+  const handledeleteFeedback = (id) => {
+    deleteFeedback(id);
     toast.error("Feedback deleted");
   };
   console.log(feedbacks)
@@ -47,7 +47,7 @@ const FeedbackList = () => {
         <FaCheck /> Mark as Read
       </button>
       <button
-        onClick={() => deleteFeedback(_id)}
+        onClick={() => handledeleteFeedback(_id)}
         className="flex items-center gap-2 text-red-600 hover:text-red-800"
       >
         <FaTrash /> Delete

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Section = require("../Model/Section.model"); // Import the Section model
 const Assessment = require("../Model/Assessment.model");
 const Feedback=require("../Model/Feedback.model")
+const Contact=require("../Model/ContactUs.model")
 const AdminController = {
   async createUser(req, res) {
     try {
@@ -167,21 +168,47 @@ const AdminController = {
     try {
       const user = await User.findById(req.params.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-
-      if (user.role === "student") {
+  
+      // Remove user from enrolled courses
+      await Course.updateMany(
+        { studentsEnrolled: user._id },
+        { $pull: { studentsEnrolled: user._id } }
+      );
+  
+      // Remove user from assessments
+      await Assessment.updateMany(
+        { "studentResults.student": user._id },
+        { $pull: { studentResults: { student: user._id } } }
+      );
+  
+      // Remove user from sections
+      await Section.updateMany(
+        { students: user._id },
+        { $pull: { students: user._id } }
+      );
+  
+      // Remove user from instructor roles if applicable
+      if (user.role === "instructor") {
         await Course.updateMany(
-          { studentsEnrolled: user._id },
-          { $pull: { studentsEnrolled: user._id } }
+          { instructors: user._id },
+          { $pull: { instructors: user._id } }
+        );
+        await Section.updateMany(
+          { instructors: user._id },
+          { $pull: { instructors: user._id } }
         );
       }
-
+  
+      // Delete the user
       await user.deleteOne();
+  
       res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Delete User Error:", error);
       res.status(500).json({ message: error.message });
     }
   },
+  
 
   async createCourse(req, res) {
     try {
@@ -206,38 +233,50 @@ const AdminController = {
 
   async getAllCourses(req, res) {
     try {
-      console.log("Received Query Params:", req.query);
-  
       const { courseId, section } = req.query;
   
       let query = {};
-      if (courseId) query._id = new mongoose.Types.ObjectId(courseId);
+      if (courseId) {
+        if (!mongoose.isValidObjectId(courseId)) {
+          return res.status(400).json({ message: "Invalid courseId format" });
+        }
+        query._id = new mongoose.Types.ObjectId(courseId);
+      }
   
-      let studentFilter = {}; // Store student filtering condition
-      let studentAssessments = {}; // Store student assessment scores
+      let studentFilter = {};
+      let studentAssessments = {};
   
-      if (section) {
-        // Find the section document with students
+      if (section && courseId) {
+        console.log("Searching for section:", section, "in courseId:", courseId);
+  
+        // Ensure section name is trimmed and case-insensitive
         const sectionDoc = await Section.findOne({
-          course: courseId,
-          section: section.trim(),
-        });
+          course: new mongoose.Types.ObjectId(courseId),
+          section: { $regex: `^${section.trim()}$`, $options: "i" },
+        })
+          .select("students")
+          .lean();
   
         if (!sectionDoc) {
+          console.log("No section found for courseId:", courseId, "and section:", section);
           return res.status(404).json({ message: "No section found for this course!" });
         }
   
+        console.log("Section found:", sectionDoc);
+  
         const studentIds = sectionDoc.students.map((id) => new mongoose.Types.ObjectId(id));
-        studentFilter["_id"] = { $in: studentIds }; // Filter only students from the section
+        studentFilter["_id"] = { $in: studentIds };
   
-        // Fetch student assessments for the selected course and section
-        const assessments = await Assessment.findOne({
-          course: courseId,
+        // Fetch assessment results in one query
+        const assessment = await Assessment.findOne({
+          course: new mongoose.Types.ObjectId(courseId),
           section: sectionDoc._id,
-        });
+        })
+          .select("studentResults")
+          .lean();
   
-        if (assessments) {
-          assessments.studentResults.forEach((result) => {
+        if (assessment) {
+          assessment.studentResults.forEach((result) => {
             studentAssessments[result.student.toString()] = {
               assignmentScore: result.assignmentScore ?? 0,
               examScore: result.examScore ?? 0,
@@ -247,29 +286,27 @@ const AdminController = {
         }
       }
   
- 
+      // Fetch courses with filtered students and instructors
       const courses = await Course.find(query)
         .populate({
           path: "studentsEnrolled",
-          match: studentFilter, // Apply student filtering condition
+          match: studentFilter,
           select: "firstName lastName email",
+          options: { lean: true }, // Return plain objects instead of Mongoose documents
         })
-        .populate("instructors", "firstName lastName email");
+        .populate("instructors", "firstName lastName email")
+        .lean(); // Make sure all documents are plain objects
   
       // Attach assessment scores to students
-      const coursesWithAssessments = courses.map((course) => {
-        return {
-          ...course.toObject(),
-          studentsEnrolled: course.studentsEnrolled.map((student) => {
-            return {
-              ...student.toObject(),
-              assignmentScore: studentAssessments[student._id.toString()]?.assignmentScore ?? 0,
-              examScore: studentAssessments[student._id.toString()]?.examScore ?? 0,
-              finalScore: studentAssessments[student._id.toString()]?.finalScore ?? 0,
-            };
-          }),
-        };
-      });
+      const coursesWithAssessments = courses.map((course) => ({
+        ...course,
+        studentsEnrolled: course.studentsEnrolled.map((student) => ({
+          ...student,
+          assignmentScore: studentAssessments[student._id.toString()]?.assignmentScore ?? 0,
+          examScore: studentAssessments[student._id.toString()]?.examScore ?? 0,
+          finalScore: studentAssessments[student._id.toString()]?.finalScore ?? 0,
+        })),
+      }));
   
       res.status(200).json(coursesWithAssessments);
     } catch (error) {
@@ -277,6 +314,7 @@ const AdminController = {
       res.status(500).json({ message: "Something went wrong" });
     }
   }
+  
   
 ,  
   async getCourseById(req, res) {
@@ -311,17 +349,62 @@ const AdminController = {
       res.status(500).json({ message: "Failed to retrieve feedback. Please try again later." }); // ✅ Generic error message
     }
   },
-  
-
-  async deleteCourse(req, res) {
+  async getcontactUs(req, res){
     try {
-      const course = await Course.findByIdAndDelete(req.params.id);
-      if (!course) return res.status(404).json({ message: "Course not found" });
-      res.status(200).json({ message: "Course deleted successfully" });
+      const contactUs = await Contact.find();
+      res.status(200).json(contactUs); // ✅ Use 200 for GET responses
+    } catch (error) {
+      console.error("Error fetching contactUs:", error); // ✅ Log error for debugging
+      res.status(500).json({ message: "Failed to retrieve contactUs. Please try again later." }); // ✅ Generic error message
+    }
+  },
+  async deleteContactUs(req, res){
+    console.log(req.params);
+    try {
+      const contactUs = await Contact.findByIdAndDelete(req.params.id);
+      if (!contactUs) return res.status(404).json({ message: "ContactUs not found" });
+      res.status(200).json({ message: "ContactUs deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Something went wrong" });
     }
   },
+  async deleteFeedback(req, res){
+    try {
+      const feedback = await Feedback.findByIdAndDelete(req.params.id);
+      if (!feedback) return res.status(404).json({ message: "Feedback not found" });
+      res.status(200).json({ message: "Feedback deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Something went wrong" });
+    }
+  },
+
+  async deleteCourse(req, res) {
+    try {
+      const course = await Course.findById(req.params.id);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+  
+      // Delete related assessments
+      await Assessment.deleteMany({ course: course._id });
+  
+      // Delete related sections
+      await Section.deleteMany({ course: course._id });
+  
+      // Remove course from enrolled students
+      await User.updateMany(
+        { enrolledCourses: course._id },
+        { $pull: { enrolledCourses: course._id } }
+      );
+  
+      // Delete the course itself
+      await course.deleteOne();
+  
+      res.status(200).json({ message: "Course and related data deleted successfully" });
+    } catch (error) {
+      console.error("Delete Course Error:", error);
+      res.status(500).json({ message: "Something went wrong" });
+    }
+  }
+  ,
 };
 
 module.exports = AdminController;

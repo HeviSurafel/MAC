@@ -6,7 +6,7 @@ function DashboardLayout() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
-      <div className="flex-1 ml-64 pt-16 p-6"> {/* Added ml-64 for left margin */}
+      <div className="flex-1  pt-16 p-6"> {/* Added ml-64 for left margin */}
         <Outlet />
       </div>
     </div>

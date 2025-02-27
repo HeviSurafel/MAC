@@ -6,7 +6,7 @@ const useInstructorStore = create((set) => ({
   courseStudents: [],
   isLoading: false,
   error: null,
-  courseStatus: "incomplete", // "incomplete" or "completed"
+  courseStatus: null,
 
   // Fetch instructor courses and students
   getInstructorCoursesAndStudents: async () => {
@@ -14,7 +14,7 @@ const useInstructorStore = create((set) => ({
     try {
       const response = await axios.get("/instructor/courses");
       set({ courses: response.data, isLoading: false });
-      toast.success("Courses loaded successfully!");
+      
     } catch (err) {
       console.error("Failed to load courses.", err);
       set({ error: "Failed to load courses.", isLoading: false });
@@ -28,7 +28,7 @@ const useInstructorStore = create((set) => ({
     try {
       const response = await axios.get(`/instructor/courses/${courseId}/sections/${section}/students`);
       set({ courseStudents: response.data.students, isLoading: false });
-      toast.success("Students loaded successfully!");
+    
     } catch (error) {
       set({ error: "Failed to load students", isLoading: false });
       toast.error("Failed to load students.");

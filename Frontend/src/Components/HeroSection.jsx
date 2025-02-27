@@ -1,7 +1,7 @@
 import React from 'react';
 import { TypeAnimation } from 'react-type-animation'; // Updated library
 import Logo from '../assets/image01.jpg'; // Ensure the path is correct
-
+import {Link} from "react-router-dom"
 const HeroSection = () => {
   return (
     <section className="relative bg-gradient-to-r from-blue-600 to-teal-500 text-white py-30 h-[600px]">
@@ -31,12 +31,11 @@ const HeroSection = () => {
           <div className="bg-red-500 text-white text-lg font-semibold py-2 px-4 rounded-lg">
             <span>🎉 Limited Time Offer: Get 50% OFF on All Courses! 🎉</span>
           </div>
-          <a
-            href="#enroll"
+          <Link to={"/contact"}
             className="bg-yellow-500 text-gray-900 font-semibold py-3 px-6 my-5  rounded-full shadow-lg hover:bg-yellow-400 transition duration-300"
           >
             Enroll Now
-          </a>
+          </Link>
         </div>
       </div>
 

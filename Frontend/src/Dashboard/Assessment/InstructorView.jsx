@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 const sections = ["A", "B", "C", "D", "E", "F", "G"];
 
@@ -11,23 +12,28 @@ const InstructorView = ({
   selectedSection,
   setSelectedSection,
   fetchCourseStudents,
-  students = [],
   editedAssessments,
   setEditedAssessments,
-  isSubmitted,
   updateAllAssessments,
   markCourseAsCompleted,
   generateCertificates,
   fetchCourseStatus,
-  courseStudents,
 }) => {
+  const [courseStudents, setCourseStudents] = useState([]);
+
   useEffect(() => {
+    setCourseStudents([]); // ✅ Clear previous students when switching section
+    setEditedAssessments({}); // ✅ Reset assessments
+  
     if (selectedCourse && selectedSection) {
       fetchCourseStatus(selectedCourse, selectedSection);
-      fetchCourseStudents(selectedCourse, selectedSection);
+  
+      fetchCourseStudents(selectedCourse, selectedSection).then((students) => {
+        console.log("Fetched students:", students); // Debugging log
+        setCourseStudents(students || []); // ✅ Ensure fresh data
+      });
     }
   }, [selectedCourse, selectedSection]);
-
   const handleAssessmentChange = (studentId, key, value) => {
     setEditedAssessments((prev) => {
       const updated = {
@@ -44,19 +50,18 @@ const InstructorView = ({
     });
   };
 
-  // ✅ Save all assessments function
   const saveAllAssessments = async () => {
     if (!selectedCourse || !selectedSection) {
-      console.error("Course or section not selected.");
+      toast.error("Please select a course and section.");
       return;
     }
+
 
     const assessments = courseStudents.map((student) => {
       const editedData = editedAssessments[student._id] || {};
       return {
         studentId: student._id,
-        assignmentScore:
-          editedData.assignmentScore ?? student.assignmentScore ?? 0,
+        assignmentScore: editedData.assignmentScore ?? student.assignmentScore ?? 0,
         examScore: editedData.examScore ?? student.examScore ?? 0,
         finalScore: editedData.finalScore ?? student.finalScore ?? 0,
       };
@@ -64,24 +69,39 @@ const InstructorView = ({
 
     await updateAllAssessments(assessments, selectedCourse, selectedSection);
     setEditedAssessments({});
-    fetchCourseStudents(selectedCourse, selectedSection);
+    fetchCourseStudents(selectedCourse, selectedSection).then(setCourseStudents);
   };
 
-  // ✅ Disable inputs and buttons if the course is "completed"
-  const isEditable = courseStatus === "incomplete";
+  const submitAllCertificates = () => {
+    if (!selectedCourse || !selectedSection) {
+      toast.error("Please select a course and section.");
+      return;
+    }
 
+    const eligibleStudents = courseStudents.filter((student) => {
+      const finalScore = editedAssessments[student._id]?.finalScore ?? student.finalScore ?? 0;
+      return finalScore > 50;
+    });
+
+    if (eligibleStudents.length === 0) {
+      toast.error("No students qualify for a certificate.");
+      return;
+    }
+
+    markCourseAsCompleted(selectedCourse, selectedSection);
+    generateCertificates(selectedCourse, selectedSection, eligibleStudents);
+  };
+
+  const isEditable = courseStatus === "incomplete";
+  console.log("consoling coursestudent", courseStudents,courses);
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">
-        Instructor: {user?.name}
-      </h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: {user?.name}</h1>
 
-      {/* Course & Section Selection */}
+      {/* Course & Section Selectors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Course
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
           <select
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
@@ -89,17 +109,13 @@ const InstructorView = ({
           >
             <option value="">Select a course</option>
             {courses?.map(({ courseId, courseName }) => (
-              <option key={courseId} value={courseId}>
-                {courseName}
-              </option>
+              <option key={courseId} value={courseId}>{courseName}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Section
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Section</label>
           <select
             value={selectedSection}
             onChange={(e) => setSelectedSection(e.target.value)}
@@ -107,15 +123,13 @@ const InstructorView = ({
           >
             <option value="">Select a section</option>
             {sections.map((section) => (
-              <option key={section} value={section}>
-                {section}
-              </option>
+              <option key={section} value={section}>{section}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Student Table */}
+      {/* Student List Table */}
       {selectedCourse && selectedSection && (
         <div className="overflow-x-auto mt-6">
           <h2 className="text-lg font-semibold mb-4">Student List</h2>
@@ -138,18 +152,8 @@ const InstructorView = ({
                     <td className="border p-3">
                       <input
                         type="number"
-                        value={
-                          editedAssessments[student._id]?.assignmentScore ??
-                          student.assignmentScore ??
-                          0
-                        }
-                        onChange={(e) =>
-                          handleAssessmentChange(
-                            student._id,
-                            "assignmentScore",
-                            e.target.value
-                          )
-                        }
+                        value={editedAssessments[student._id]?.assignmentScore ?? student.assignmentScore ?? 0}
+                        onChange={(e) => handleAssessmentChange(student._id, "assignmentScore", e.target.value)}
                         className="w-full border rounded p-2"
                         disabled={!isEditable}
                       />
@@ -157,33 +161,21 @@ const InstructorView = ({
                     <td className="border p-3">
                       <input
                         type="number"
-                        value={
-                          editedAssessments[student._id]?.examScore ??
-                          student.examScore ??
-                          0
-                        }
-                        onChange={(e) =>
-                          handleAssessmentChange(
-                            student._id,
-                            "examScore",
-                            e.target.value
-                          )
-                        }
+                        value={editedAssessments[student._id]?.examScore ?? student.examScore ?? 0}
+                        onChange={(e) => handleAssessmentChange(student._id, "examScore", e.target.value)}
                         className="w-full border rounded p-2"
                         disabled={!isEditable}
                       />
                     </td>
                     <td className="border p-3 font-bold">
-                      {editedAssessments[student._id]?.finalScore ??
-                        student.finalScore ??
-                        0}
+                      {editedAssessments[student._id]?.finalScore ?? student.finalScore ?? 0}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td colSpan="5" className="border p-3 text-center text-gray-500">
-                    No students found for this course and section.
+                    No students found.
                   </td>
                 </tr>
               )}
@@ -191,38 +183,6 @@ const InstructorView = ({
           </table>
         </div>
       )}
-
-      {/* Action Buttons */}
-      <div className="mt-6 text-right">
-        <button
-          onClick={saveAllAssessments}
-          className={`text-white px-6 py-2 rounded-md mr-4 ${
-            isEditable
-              ? "bg-blue-500 hover:bg-blue-600"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
-          disabled={!isEditable}
-        >
-          Save All
-        </button>
-        <button
-          onClick={() => {
-            if (selectedCourse && selectedSection) {
-              markCourseAsCompleted(selectedCourse, selectedSection);
-            } else {
-              console.error("Course or section not selected.");
-            }
-          }}
-          className={`text-white px-6 py-2 rounded-md ${
-            isEditable
-              ? "bg-green-500 hover:bg-green-600"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
-          disabled={!isEditable}
-        >
-          Submit All
-        </button>
-      </div>
     </div>
   );
 };

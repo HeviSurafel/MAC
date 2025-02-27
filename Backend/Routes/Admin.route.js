@@ -18,7 +18,10 @@ router.get('/courses', protectRoute,AdminController.getAllCourses); // Get all c
 router.get('/courses/:id',protectRoute,adminRoute, AdminController.getCourseById); // Get a course by ID
 router.put('/courses/:id',protectRoute,adminRoute, AdminController.updateCourse); // Update a course
 router.delete('/courses/:id',protectRoute,adminRoute, AdminController.deleteCourse);
-router.get("/student/feedback",protectRoute,adminRoute,AdminController.getFeedback)
+router.get("/student/feedback",protectRoute,adminRoute,AdminController.getFeedback);
+router.delete("/student/feedback/delete/:id",protectRoute,adminRoute,AdminController.deleteFeedback);
+router.get("/contact",protectRoute,adminRoute,AdminController.getcontactUs);
+router.delete("/delete/contact/:id",protectRoute,adminRoute,AdminController.deleteContactUs);
 // Create a new instructor
  // Get all instructors
 module.exports=router;

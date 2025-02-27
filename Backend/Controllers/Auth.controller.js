@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../Model/User.model');
 const redis = require('../Middleware/Redis');
 const transporter = require('../config/nodemailer');
-
+const Contact=require("../Model/ContactUs.model")
 // Generate tokens
 const generateToken = async (userId) => {
   const accessToken = jwt.sign({ userId }, "accessTokenSecret", {
@@ -232,11 +232,45 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+const updateProfile = async (req, res) => {
+  const {email}=req.user
+  const { address, phone } = req.body;
+  try {
+    const user = await User.findOne({email});
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.address =user.address;
+    user.phone = phone;
+    await user.save();
+    res.status(200).json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+};
+const ContactUs = async (req, res) => {
+  const {name,subject, email, message } = req.body;
+  try {
+    const { name, email, subject, message } = req.body;
 
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const newMessage = new Contact({ name, email, subject, message });
+    await newMessage.save();
+    res.status(201).json({ message: "Message sent successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error. Try again later." });
+  }
+}
 module.exports = {
   signup,
   login,
+  ContactUs,
   logout,
+  updateProfile,
   refreshToken,
   getProfile,
   getAllUser,

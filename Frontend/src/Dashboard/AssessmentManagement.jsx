@@ -9,9 +9,10 @@ import AdminView from "./Assessment/AdminView";
 
 const AssessmentManagement = () => {
   const { user } = useUserStore();
-  
-  const { 
-    courses, 
+
+  const {
+    courses, // Array of instructor courses
+    courseStudents, 
     getInstructorCoursesAndStudents, 
     fetchCourseStudents, 
     updateAllAssessments, 
@@ -23,21 +24,37 @@ const AssessmentManagement = () => {
   const { courses: adminCourses, getCourses } = useAdminStore();
   const { studentandgrades, fetchCoursesandGrades, loading: studentLoading } = useStudentStore();
 
-  // ✅ Fix: Manage selected course & section properly
+  // ✅ Manage selected course & section properly
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [editedAssessments, setEditedAssessments] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [courseStatus, setCourseStatus] = useState(""); // ✅ Store fetched courseStatus
 
   useEffect(() => {
     if (user?.role === "instructor") {
-      getInstructorCoursesAndStudents(); // ✅ No need to add it in dependencies
+      getInstructorCoursesAndStudents();
     } else if (user?.role === "admin") {
-      getCourses(); // ✅ Removed invalid parameters
+      getCourses();
     } else {
       fetchCoursesandGrades();
     }
-  }, [user]); // ✅ Removed unnecessary function dependencies
+  }, [user]);
+
+  // ✅ Reset selectedSection when changing selectedCourse
+  useEffect(() => {
+    setSelectedSection(""); // Clear section when course changes
+    setCourseStatus(""); // Reset course status
+  }, [selectedCourse]);
+
+  // ✅ Fetch course status dynamically when both course and section are selected
+  useEffect(() => {
+    if (selectedCourse && selectedSection) {
+      fetchCourseStatus(selectedCourse, selectedSection).then((status) => {
+        setCourseStatus(status || ""); // Ensure status updates correctly
+      });
+    }
+  }, [selectedCourse, selectedSection]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -56,6 +73,8 @@ const AssessmentManagement = () => {
       ) : (
         <InstructorView 
           user={user} 
+          courseStatus={courseStatus} // ✅ Now dynamically updated
+          courseStudents={courseStudents}
           courses={courses} 
           selectedCourse={selectedCourse} 
           setSelectedCourse={setSelectedCourse} 

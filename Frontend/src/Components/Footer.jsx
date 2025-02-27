@@ -1,10 +1,10 @@
 import React from 'react';
 import { FaFacebookF, FaDribbble, FaLinkedinIn, FaInstagram, FaBehance } from 'react-icons/fa';
-import logo from '../assets/image01.jpg';
+import logo from '../assets/Makalla Code Acadamey-01.jpg';
 
 const Footer = () => {
   return (
-    <div className="w-full bg-gradient-to-r from-blue-600 to-teal-500 py-12 px-6 md:px-10">
+    <div className="w-full bg-gradient-to-r from-blue-600 to-teal-500  py-10 px-6 md:px-10 mt-auto">
       <div className="max-w-[1480px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Logo and Contact Section */}
         <div>

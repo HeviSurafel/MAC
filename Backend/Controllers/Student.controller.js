@@ -3,6 +3,9 @@ const QRCode = require("qrcode");
 const Assessment= require("../Model/Assessment.model");
 const User= require("../Model/User.model");
 const Feedback=require("../Model/Feedback.model")
+const path = require("path");
+const Certificate = require("../Model/Certeficate.model");
+const fs =require("fs");
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
   MATERIALS_NOT_FOUND: "No materials found for this course",
@@ -86,23 +89,30 @@ const viewGrades = async (req, res) => {
 const getcerteficate = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const student = await Course.findOne({ studentsEnrolled: studentId }).populate("studentsEnrolled");
 
-    if (!student) return res.status(404).json({ message: ERROR_MESSAGES.STUDENT_NOT_FOUND });
+    if (!studentId) {
+      return res.status(400).json({ message: "Student ID is required." });
+    }
 
-    const certificationData = JSON.stringify({
-      studentId,
-      name: student.studentsEnrolled.name,
-      courses: student.courseName,
-      issuedAt: new Date().toISOString(),
-    });
+    // Check if certificate exists in the database
+    const certificate = await Certificate.findOne({ student: studentId });
+    if (!certificate) {
+      return res.status(404).json({ message: "No certificate found for this student." });
+    }
 
-    const qrImage = await QRCode.toBuffer(certificationData, { type: "png" });
-    res.set("Content-Type", "image/png");
-    res.send(qrImage);
+    // Path to the certificate file
+    const certificatePath = path.join(__dirname, "../certificates", `${studentId}.pdf`);
+
+    if (!fs.existsSync(certificatePath)) {
+      return res.status(404).json({ message: "Certificate file not found." });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${studentId}.pdf"`);
+    return res.sendFile(certificatePath);
   } catch (error) {
-    console.error("QR Code Generation Error:", error);
-    res.status(500).json({ message: ERROR_MESSAGES.QR_GENERATION_ERROR });
+    console.error("Certificate Retrieval Error:", error);
+    res.status(500).json({ message: "Error retrieving certificate" });
   }
 };
 const submitFeedback = async (req, res) => {
