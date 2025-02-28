@@ -22,6 +22,7 @@ import ResetPassword from "./Pages/ResetPassword";
 import FeedbackList from "./Dashboard/Admin/FeedbackList";
 import ContactMessages from "./Dashboard/Admin/ContactMessages";
 import Footer from "./Components/Footer";
+import PaymentPage from "./Dashboard/Payment/PaymentPage";
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
@@ -58,6 +59,8 @@ function App() {
                 <Route path="feedback" element={<FeedbackList />} />
                 <Route path="contactUs" element={<ContactMessages />} />
                 <Route path="settings" element={<SettingsPage />} />
+                {user.role === "admin" && (   <Route path="payement" element={<PaymentPage />} />)}
+             
               </Route>
             ) : (
               <Route path="*" element={<Navigate to="/login" replace />} />

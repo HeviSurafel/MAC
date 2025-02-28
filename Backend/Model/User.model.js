@@ -37,6 +37,7 @@ const userSchema = mongoose.Schema({
   },
 
   address: { type: String },
+  registrationFee: { type: Number, required: true, default: 0 },
 
   phoneNumber: {
     type: String,

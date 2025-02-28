@@ -12,7 +12,8 @@ const UserModal = ({
   const [section, setSection] = useState(["A", "B", "C", "D", "E", "F", "G"]);
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [selectValue, setSelectValue] = useState("");
-  const [selectedSection, setSelectedSection] = useState(""); // New state for selected section
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedCourseFee, setSelectedCourseFee] = useState(null); // New state for course fee
 
   useEffect(() => {
     const generatePassword = () => {
@@ -32,25 +33,47 @@ const UserModal = ({
       courses: selectedCourses,
       section: selectedSection,
     }));
-  }, [selectedCourses, selectedSection, setFormData]); // Include section in formData update
+  }, [selectedCourses, selectedSection, setFormData]);
 
   const handleCourseSelection = (e) => {
-    const selectedCourse = e.target.value;
-    if (selectedCourse && !selectedCourses.includes(selectedCourse)) {
-      setSelectedCourses((prev) => [...prev, selectedCourse]);
+    const selectedCourseId = e.target.value;
+    if (selectedCourseId && !selectedCourses.includes(selectedCourseId)) {
+      setSelectedCourses((prev) => [...prev, selectedCourseId]);
+  
+      // Find the selected course and set its registration fee (only for students)
+      if (formData.role === "student") {
+        const selectedCourse = courses.find((c) => c._id === selectedCourseId);
+        if (selectedCourse) {
+          setSelectedCourseFee(selectedCourse.registrationFee);
+          setFormData((prev) => ({
+            ...prev,
+            registrationFee: selectedCourse.registrationFee,
+          }));
+        }
+      }
     }
     setSelectValue(""); // Reset select after adding
   };
-
+  
   const handleRemoveCourse = (courseId) => {
     setSelectedCourses((prev) => prev.filter((c) => c !== courseId));
+  
+    // Reset the fee if the course is removed (only for students)
+    if (formData.role === "student" && selectedCourses.length === 1) {
+      setSelectedCourseFee(null);
+      setFormData((prev) => ({
+        ...prev,
+        registrationFee: null,
+      }));
+    }
   };
-
+  
   const handleCreateUser = async () => {
     await createUser({
       ...formData,
       courses: selectedCourses,
       section: selectedSection,
+      registrationFee: formData.registrationFee, // Include the registration fee
     });
     setIsModalOpen(false);
   };
@@ -158,7 +181,7 @@ const UserModal = ({
               </label>
               <input
                 type="text"
-                value={formData.password||""}
+                value={formData.password || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
@@ -209,6 +232,21 @@ const UserModal = ({
                 ))}
               </select>
 
+              {/* Display Registration Fee (only for students) */}
+              {formData.role === "student" && selectedCourseFee !== null && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Registration Fee
+                  </label>
+                  <input
+                    type="text"
+                    value={`${selectedCourseFee} birr`}
+                    readOnly
+                    className="w-full p-2 border rounded-lg bg-gray-100"
+                  />
+                </div>
+              )}
+
               {/* Section Selection for Students or Instructors */}
               {selectedCourses.length > 0 && (
                 <div className="mt-4">
@@ -216,7 +254,7 @@ const UserModal = ({
                     Select Class Section
                   </label>
                   <select
-                    value={selectedSection} // Add this to bind the value
+                    value={selectedSection}
                     onChange={(e) => setSelectedSection(e.target.value)}
                     className="w-full p-2 border rounded-lg"
                   >

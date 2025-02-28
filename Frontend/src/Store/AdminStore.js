@@ -4,12 +4,14 @@ import { toast } from "react-hot-toast";
 
 const useAdminStore = create((set, get) => ({
   users: [],
+  unpaidStudents: [],
   feedbacks:null,
   courses: [],
   instructors: [],
   user: null,
   loading: false,
   error: null,
+  setUnpaidStudents: (students) => set({ unpaidStudents: students }),
 
   setUsers: (users) => set({ users }),
   setUser: (user) => set({ user }),
@@ -101,6 +103,55 @@ const useAdminStore = create((set, get) => ({
       (data) => set({ courses: get().courses.map((course) => (course._id === id ? data : course)) })
     );
   },
+  fetchUnpaidStudents: (courseId) =>
+    get().handleRequest(
+      () => axios.get(`/student/unpaid/${courseId}`),
+      null,
+      "Failed to fetch unpaid students.",
+      (data) => set({ unpaidStudents: data })
+    ),
+
+    markAsPaid: async (studentId, courseId, amount, paymentType) => {
+      const paymentId = prompt("Enter Payment ID:");
+      if (!paymentId) {
+        toast.error("Payment ID is required.");
+        return;
+      }
+  
+      await get().handleRequest(
+        () =>
+          axios.post("/api/student/payment", {
+            studentId,
+            courseId,
+            amount,
+            paymentType,
+            paymentId,
+          }),
+        "Payment marked successfully.",
+        "Failed to update payment.",
+        () => get().fetchUnpaidStudents(courseId)
+      );
+    },
+    makePayment: async (studentId, courseId, amount, paymentType, selectedMonths = []) => {
+
+      try {
+        const response = await axios.post(`/student/pay/${studentId}/${courseId}`, {
+          amount,
+          paymentType,
+          selectedMonths,
+       
+        });
+  
+        if (response.status === 201) {
+          toast.success("Payment marked successfully.");
+        } else {
+          toast.error(response.data.message || "Payment failed.");
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error(error.response?.data?.message || "Server error occurred.");
+      }
+    },
 
   deleteCourse: (id) => {
     if (!window.confirm("Are you sure you want to delete this course?")) return;
@@ -131,7 +182,7 @@ const useAdminStore = create((set, get) => ({
 
   getAllInstructors: () =>
     get().handleRequest(
-      () => axios.get("/instructors"),
+      () => axios.get("/all/instructors"),
       null,
       "Failed to fetch instructors.",
       (data) => set({ instructors: data })

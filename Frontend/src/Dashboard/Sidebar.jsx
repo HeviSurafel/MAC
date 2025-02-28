@@ -32,6 +32,11 @@ const Sidebar = () => {
       icon: <FaBook />,
       label: "ContactUs",
     });
+    links.push({
+      path: "/dashboard/payement",
+      icon: <FaBook />,
+      label: "Payment",
+    });
   }
   const handleLogout = (e) => {
     e.preventDefault();

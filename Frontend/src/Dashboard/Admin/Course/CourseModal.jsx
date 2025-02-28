@@ -1,18 +1,35 @@
 import React, { useEffect, useState } from "react";
-
-const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, courseCode }) => {
+import useAdminStore from "../../../Store/AdminStore";
+const CourseModal = ({
+  isOpen,
+  onClose,
+  course,
+  onSave,
+  onChange,
+  courseCode,
+}) => {
+  const { instructors, getAllInstructors } = useAdminStore();
+  useEffect(() => {
+    getAllInstructors();
+  }, []);
+  console.log(instructors);
   const [courseData, setCourseData] = useState({
-    title: "",
+    courseName: "",
     description: "",
     instructorName: "",
     status: "Active",
     courseCode: "",
+    paymentType: "one-time", // Default payment type
+    cost: "",
+    durationInMonths: 3,
+    startDate: "", // Admin must assign this
+    endDate: "", // Admin must assign this
   });
 
   // Update form fields when course prop changes
   useEffect(() => {
     if (course) {
-      setCourseData({ ...course }); // Clone course object
+      setCourseData({ ...course });
     }
   }, [course]);
 
@@ -22,39 +39,46 @@ const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, c
       ...courseData,
       [field]: value,
     });
-    onChange(field, value); // Update parent component state as well
+    onChange(field, value);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Pass courseData to parent for saving
+    if (!courseData.startDate || !courseData.endDate) {
+      alert("Please select a start and end date.");
+      return;
+    }
     onSave(courseData);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg w-11/12 max-w-md shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white p-8 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3 shadow-2xl max-h-[80vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
           {course ? "Edit Course" : "Add Course"}
         </h2>
         <form onSubmit={handleSubmit}>
           {/* Title */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Title
+            </label>
             <input
               type="text"
-              value={courseData.title}
-              onChange={(e) => handleInputChange("title", e.target.value)}
+              value={courseData.courseName}
+              onChange={(e) => handleInputChange("courseName", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg"
               required
             />
           </div>
 
           {/* Description */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
             <textarea
               value={courseData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
@@ -65,26 +89,104 @@ const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, c
           </div>
 
           {/* Instructor */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Instructor</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Instructor
+            </label>
             <select
-              value={courseData.instructorName}
-              onChange={(e) => handleInputChange("instructorName", e.target.value)}
+              value={courseData.instructors || []}
+              onChange={(e) => {
+                const selectedInstructors = Array.from(
+                  e.target.selectedOptions,
+                  (option) => option.value
+                );
+                handleInputChange("instructors", selectedInstructors);
+              }}
               className="w-full p-3 border border-gray-300 rounded-lg"
             >
-              <option value="">Select Instructor</option>
-              <option value="No Instructor">No Instructor</option> {/* Added "No Instructor" option */}
               {instructors?.map((inst) => (
-                <option key={inst._id} value={inst.user?.firstName}>
-                  {inst.user?.firstName}
+                <option key={inst._id} value={inst._id}>
+                  {inst.firstName} {inst.lastName}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Payment Type */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Payment Type
+            </label>
+            <select
+              value={courseData.paymentType}
+              onChange={(e) => handleInputChange("paymentType", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            >
+              <option value="one-time">One-time Payment</option>
+              <option value="monthly">Monthly Subscription</option>
+            </select>
+          </div>
+
+          {/* Course Fee */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Course Fee (₦)
+            </label>
+            <input
+              type="number"
+              value={courseData.cost}
+              onChange={(e) => handleInputChange("cost", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          {/* Course Code */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Course Code
+            </label>
+            <input
+              type="text"
+              value={courseData.courseCode || courseCode}
+              onChange={(e) => handleInputChange("courseCode", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          {/* Start Date */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={courseData.startDate}
+              onChange={(e) => handleInputChange("startDate", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          {/* End Date */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={courseData.endDate}
+              onChange={(e) => handleInputChange("endDate", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
           {/* Status */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
             <select
               value={courseData.status}
               onChange={(e) => handleInputChange("status", e.target.value)}
@@ -93,17 +195,6 @@ const CourseModal = ({ isOpen, onClose, course, onSave, instructors, onChange, c
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
-          </div>
-
-          {/* Course Code */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Course Code</label>
-            <input
-              type="text"
-              value={courseData.courseCode || courseCode}
-              onChange={(e) => handleInputChange("courseCode", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            />
           </div>
 
           {/* Actions */}

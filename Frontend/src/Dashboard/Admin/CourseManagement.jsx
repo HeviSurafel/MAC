@@ -25,9 +25,16 @@ const CourseManagement = () => {
   const [newCourse, setNewCourse] = useState({
     courseName: "",
     description: "",
-    instructors: [], // Store selected instructors
+    instructors: [],
     courseCode: generateCourseCode(),
+    cost: 0,
+    paymentType: "monthly",
+    registrationFee: 0,
+    durationInMonths: 3,  // Ensure this is correctly mapped
+    startDate: "",  // Admin must manually assign this
+    endDate: "",  // Admin must manually assign this
   });
+  
 
   useEffect(() => {
     getCourses();
@@ -54,6 +61,10 @@ const CourseManagement = () => {
       description: "",
       instructors: [],
       courseCode: generateCourseCode(),
+      cost: 0,
+      paymentType: "monthly",
+      registrationFee: 0,
+      duration: 3,
     });
     setIsModalOpen(true);
   };
@@ -63,8 +74,14 @@ const CourseManagement = () => {
     setNewCourse({
       courseName: course.courseName || "",
       description: course.description || "",
-      instructors: course.instructors || [], // Ensure instructors are properly set
+      instructors: course.instructors || [],
       courseCode: course.courseCode || generateCourseCode(),
+      cost: course.cost || 0,
+      paymentType: course.paymentType || "monthly",
+      registrationFee: course.registrationFee || 0,
+      duration: course.duration || 3,
+      startDate: course.startDate || "",
+      endDate: course.endDate || "",
     });
     setIsModalOpen(true);
   };
@@ -77,6 +94,12 @@ const CourseManagement = () => {
       description: "",
       instructors: [],
       courseCode: "",
+      cost: 0,
+      paymentType: "monthly",
+      registrationFee: 0,
+      duration: 3,
+      startDate: "",
+      endDate:"",
     });
   };
 
