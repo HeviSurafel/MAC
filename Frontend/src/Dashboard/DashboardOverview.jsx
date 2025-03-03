@@ -1,80 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import useAdminStore from '../Store/AdminStore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 const DashboardOverview = () => {
-  const [stats, setStats] = useState({ users: 0, courses: 0, sessions: 0 });
-  const [chartData, setChartData] = useState([]);
+  // Fetch analytics from Zustand store
+  const { analytics, fetchAnalytics, loading, error } = useAdminStore();
 
   useEffect(() => {
-    // Simulating API call to fetch analytics data
-    const fetchData = async () => {
-      const data = [
-        { date: '2024-02-01', users: 1000, courses: 50, sessions: 10 },
-        { date: '2024-02-02', users: 1100, courses: 52, sessions: 11 },
-        { date: '2024-02-03', users: 1234, courses: 56, sessions: 12 },
-      ];
-      setStats({
-        users: data[data.length - 1].users,
-        courses: data[data.length - 1].courses,
-        sessions: data[data.length - 1].sessions,
-      });
-      setChartData(data);
-    };
-    fetchData();
-  }, []);
+    if (!analytics) fetchAnalytics(); // ✅ Fetch only if analytics is not loaded
+  }, [analytics, fetchAnalytics]);
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    doc.text('Makalla Code Academy - Dashboard Report', 10, 10);
-    doc.autoTable({
-      head: [['Date', 'Users', 'Courses', 'Sessions']],
-      body: chartData.map(({ date, users, courses, sessions }) => [date, users, courses, sessions]),
-    });
-    doc.save('Dashboard_Report.pdf');
-  };
+  console.log(analytics); // Debugging purpose
+
+  // Process data for Bar Chart
+  const chartData = useMemo(() => {
+    return analytics?.userGrowth?.map((entry) => ({
+      date: `${entry._id.year}-${String(entry._id.month).padStart(2, '0')}`,
+      users: entry.count,
+      revenue: analytics?.revenueTrend?.find(
+        (rev) => rev._id.year === entry._id.year && rev._id.month === entry._id.month
+      )?.total || 0,
+    })) || [];
+  }, [analytics]);
+
+  // Stats summary
+  const stats = useMemo(() => ({
+    totalUsers: analytics?.totalUsers || 0,
+    totalStudents: analytics?.totalStudents || 0,
+    totalInstructors: analytics?.totalInstructors || 0,
+    totalAdmins: analytics?.totalAdmins || 0,
+    totalCourses: analytics?.totalCourses || 0,
+    totalPayments: analytics?.totalPayments || 0,
+    totalRevenue: analytics?.totalRevenue || 0,
+  }), [analytics]);
+
+
+
+  if (loading) return <p className="text-center text-gray-600">Loading analytics...</p>;
+  if (error) {
+    return (
+      <div className="text-center">
+        <p className="text-red-600">error</p>
+        <button
+          onClick={fetchAnalytics}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-white">
       <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">Dashboard Overview</h1>
 
+      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-500 text-white p-6 rounded-lg shadow-lg flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-semibold">Total Users</h2>
-          <p className="text-3xl font-bold">{stats.users}</p>
-        </div>
-        <div className="bg-green-500 text-white p-6 rounded-lg shadow-lg flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-semibold">Total Courses</h2>
-          <p className="text-3xl font-bold">{stats.courses}</p>
-        </div>
-        <div className="bg-blue-700 text-white p-6 rounded-lg shadow-lg flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-semibold">Active Sessions</h2>
-          <p className="text-3xl font-bold">{stats.sessions}</p>
-        </div>
+        {[
+          { label: 'Users', value: stats.totalUsers, color: 'bg-blue-500' },
+          { label: 'Students', value: stats.totalStudents, color: 'bg-green-500' },
+          { label: 'Instructors', value: stats.totalInstructors, color: 'bg-purple-500' },
+          { label: 'Admins', value: stats.totalAdmins, color: 'bg-red-500' },
+          { label: 'Courses', value: stats.totalCourses, color: 'bg-yellow-500' },
+          { label: 'Payments', value: ` ${stats.totalRevenue} birr`, color: 'bg-blue-700' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`p-6 rounded-lg shadow-lg flex flex-col items-center justify-center ${color} text-white`}>
+            <h2 className="text-2xl font-semibold">Total {label}</h2>
+            <p className="text-3xl font-bold">{value}</p>
+          </div>
+        ))}
       </div>
 
+      {/* Bar Chart */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-center text-gray-700">Analytics Overview</h2>
+        <h2 className="text-xl font-semibold mb-4 text-center text-gray-700">User Growth & Revenue</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
+          <BarChart data={chartData}>
             <XAxis dataKey="date" stroke="#333" />
             <YAxis stroke="#333" />
             <Tooltip />
-            <Line type="monotone" dataKey="users" stroke="#1E3A8A" strokeWidth={3} name="Users" />
-            <Line type="monotone" dataKey="courses" stroke="#10B981" strokeWidth={3} name="Courses" />
-            <Line type="monotone" dataKey="sessions" stroke="#3B82F6" strokeWidth={3} name="Sessions" />
-          </LineChart>
+            <Legend />
+            <Bar dataKey="users" fill="#1E3A8A" name="Users" />
+            <Bar dataKey="revenue" fill="#10B981" name="Revenue (birr)" />
+          </BarChart>
         </ResponsiveContainer>
-      </div>
-
-      <div className="flex justify-center">
-        <button
-          onClick={generatePDF}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-700 transition"
-        >
-          Download Report
-        </button>
       </div>
     </div>
   );

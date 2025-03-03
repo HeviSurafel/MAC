@@ -8,6 +8,7 @@ const AdminView = ({
   selectedSection,
   setSelectedSection,
   getCourses,
+  resetCertificatesAndCourseStatus
 }) => {
   const [loading, setLoading] = useState(false);
   const [sectionStudents, setSectionStudents] = useState([]); // State to store filtered students
@@ -39,7 +40,10 @@ const AdminView = ({
     }
   }, [selectedCourseDetails, selectedSection]);
   console.log(adminCourses);
-
+  const handleReset = () => {
+    resetCertificatesAndCourseStatus(selectedCourse); // ✅ Correct
+  }
+console.log(adminCourses)
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
@@ -172,14 +176,17 @@ const AdminView = ({
                   ))}
                 </tbody>
               </table>
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => {}}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-200"
-                >
-                  Reset Course
-                </button>
-              </div>
+              {selectedCourseDetails?.courseStatus === "completed" && (
+                 <div className="mt-6 flex justify-end">
+                 <button
+                   onClick={() => handleReset()}
+                   className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-200"
+                 >
+                   Reset Course
+                 </button>
+               </div>
+              )}
+             
             </>
           )}
         </div>

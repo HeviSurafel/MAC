@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 
 const useAdminStore = create((set, get) => ({
   users: [],
+  analytics: null,
   unpaidStudents: [],
   feedbacks: null,
   courses: [],
@@ -45,6 +46,17 @@ const useAdminStore = create((set, get) => ({
       (data) => set({ users: data })
     ),
 
+     fetchAnalytics :async () => {
+      if (get().analytics) return; // ✅ Prevent re-fetching if data exists
+      set({ loading: true });
+      try {
+        const { data } = await axios.get("/dashboard");
+        set({ analytics: data, loading: false });
+      } catch (err) {
+        set({ error: "Failed to fetch analytics", loading: false });
+      }
+    },
+     
   // Create a new user
   createUser: (userData) =>
     get().handleRequest(
@@ -142,28 +154,6 @@ const useAdminStore = create((set, get) => ({
       }
     ),
 
-  // Mark a payment as paid
-  markAsPaid: async (studentId, courseId, amount, paymentType) => {
-    const paymentId = prompt("Enter Payment ID:");
-    if (!paymentId) {
-      toast.error("Payment ID is required.");
-      return;
-    }
-
-    await get().handleRequest(
-      () =>
-        axios.post("/api/student/payment", {
-          studentId,
-          courseId,
-          amount,
-          paymentType,
-          paymentId,
-        }),
-      "Payment marked successfully.",
-      "Failed to update payment.",
-      () => get().fetchUnpaidStudents(courseId) // Refresh unpaid students list
-    );
-  },
 
   // Make a payment for specific months
   makePayment: async (studentId, courseId, amount, selectedMonths = []) => {
@@ -258,6 +248,23 @@ const useAdminStore = create((set, get) => ({
       () => set({ instructors: get().instructors.filter((inst) => inst._id !== id) }) // Remove instructor from list
     );
   },
+  resetCertificatesAndCourseStatus: (courseId) => {
+    if (!window.confirm("Are you sure you want to reset certificates and mark the course as incompleted?")) return;
+  
+    get().handleRequest(
+      () => axios.put(`/course/reset-certificates/${courseId}`),
+      "Certificates removed and course status set to incompleted.",
+      "Failed to reset certificates and course status.",
+      () => {
+        // Optional: Update local state if needed
+        set((state) => ({
+          courses: state.courses.map((course) =>
+            course._id === courseId ? { ...course, courseStatus: "incompleted" } : course
+          )
+        }));
+      }
+    );
+  },  
 }));
 
 export default useAdminStore;

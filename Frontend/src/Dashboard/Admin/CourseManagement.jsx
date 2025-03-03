@@ -38,9 +38,6 @@ const CourseManagement = () => {
   useEffect(() => {
     getCourses();
   }, []);
-
-  console.log("Courses:", courses); // Debugging
-
   const filteredCourses = (courses || []).filter(
     (course) =>
       course?.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -21,7 +21,7 @@ const AssessmentManagement = () => {
     fetchCourseStatus,
   } = useInstructorStore();
 
-  const { courses: adminCourses, getCourses } = useAdminStore();
+  const { courses: adminCourses, getCourses,resetCertificatesAndCourseStatus } = useAdminStore();
   const {
     studentandgrades,
     fetchCoursesandGrades,
@@ -76,6 +76,7 @@ const AssessmentManagement = () => {
           setSelectedCourse={setSelectedCourse}
           selectedSection={selectedSection}
           setSelectedSection={setSelectedSection}
+          resetCertificatesAndCourseStatus={resetCertificatesAndCourseStatus}
         />
       ) : user?.role === "instructor" ? (
         <InstructorView

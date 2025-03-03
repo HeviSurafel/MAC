@@ -6,9 +6,69 @@ const Assessment = require("../Model/Assessment.model");
 const Feedback = require("../Model/Feedback.model");
 const Contact = require("../Model/ContactUs.model");
 const Payment = require("../Model/Payment.model");
-
+const Certificate = require("../Model/Certeficate.model");
+const fs = require("fs").promises;
+const path = require("path");
 const AdminController = {
 
+  async getDashboard(req, res) {
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalStudents = await User.countDocuments({ role: "student" });
+      const totalInstructors = await User.countDocuments({ role: "instructor" });
+      const totalAdmins = await User.countDocuments({ role: "admin" });
+  
+      const totalCourses = await Course.countDocuments();
+      const totalPayments = await Payment.countDocuments();
+      const totalRevenue = await Payment.aggregate([
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]);
+  
+      const activeUsers = await User.countDocuments({ status: "active" });
+      const suspendedUsers = await User.countDocuments({ status: "suspended" });
+  
+      // 📌 Monthly User Registration Trend (Last 6 Months)
+      const userGrowth = await User.aggregate([
+        {
+          $group: {
+            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.year": -1, "_id.month": -1 } },
+        { $limit: 6 },
+      ]);
+  
+      // 📌 Monthly Revenue Trend (Last 6 Months)
+      const revenueTrend = await Payment.aggregate([
+        {
+          $group: {
+            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id.year": -1, "_id.month": -1 } },
+        { $limit: 6 },
+      ]);
+  
+      res.json({
+        totalUsers,
+        totalStudents,
+        totalInstructors,
+        totalAdmins,
+        totalCourses,
+        totalPayments,
+        totalRevenue: totalRevenue.length ? totalRevenue[0].total : 0,
+        activeUsers,
+        suspendedUsers,
+        userGrowth,
+        revenueTrend,
+      });
+    } catch (error) {
+      console.error("Analytics Fetch Error:", error);
+      res.status(500).json({ message: "Failed to fetch analytics data" });
+    }
+  },
   async createUser(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -336,8 +396,8 @@ const AdminController = {
       }
   
       let studentFilter = {};
-      let studentAssessments = {};
   
+      // If section and courseId are provided, filter students by section
       if (section && courseId) {
         const sectionDoc = await Section.findOne({
           course: new mongoose.Types.ObjectId(courseId),
@@ -347,13 +407,12 @@ const AdminController = {
           .lean();
   
         if (sectionDoc) {
-          const studentIds = sectionDoc.students.map(
-            (id) => new mongoose.Types.ObjectId(id)
-          );
+          const studentIds = sectionDoc.students.map((id) => new mongoose.Types.ObjectId(id));
           studentFilter["_id"] = { $in: studentIds };
         }
       }
   
+      // Fetch courses with enrolled students
       const courses = await Course.find(query)
         .populate({
           path: "studentsEnrolled",
@@ -364,42 +423,52 @@ const AdminController = {
         .populate("instructors", "firstName lastName email")
         .lean();
   
-      // Add section information to each student in the studentsEnrolled array
+      // Fetch assessments for the requested courses and sections
+      const assessments = courseId && mongoose.isValidObjectId(courseId)
+      ? await Assessment.find({ course: courseId }).lean()
+      : [];
+      // Process each course
       const coursesWithAssessments = await Promise.all(
         courses.map(async (course) => {
-          const studentsWithSection = await Promise.all(
+          const studentsWithAssessments = await Promise.all(
             course.studentsEnrolled.map(async (student) => {
               // Find the section for this student
               const sectionDoc = await Section.findOne({
                 course: course._id,
                 students: student._id,
-              }).select("section").lean();
+              })
+                .select("section")
+                .lean();
+  
+              // Find assessment for this student
+              const studentAssessment = assessments
+                .flatMap((assessment) => assessment.studentResults)
+                .find((result) => result.student.toString() === student._id.toString());
   
               return {
                 ...student,
-                section: sectionDoc ? sectionDoc.section : "N/A", // Add section field
-                assignmentScore:
-                  studentAssessments[student._id.toString()]?.assignmentScore ?? 0,
-                examScore: studentAssessments[student._id.toString()]?.examScore ?? 0,
-                finalScore:
-                  studentAssessments[student._id.toString()]?.finalScore ?? 0,
+                section: sectionDoc ? sectionDoc.section : "N/A",
+                assignmentScore: studentAssessment?.assignmentScore ?? 0,
+                examScore: studentAssessment?.examScore ?? 0,
+                finalScore: studentAssessment?.finalScore ?? 0,
               };
             })
           );
   
           return {
             ...course,
-            studentsEnrolled: studentsWithSection, // Replace with students including section
+            studentsEnrolled: studentsWithAssessments, // Replace with students including assessments
           };
         })
       );
   
       res.status(200).json(coursesWithAssessments);
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      console.error("Error fetching courses with assessments:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
   }
+  
   ,
   
 
@@ -698,6 +767,65 @@ const AdminController = {
       res.status(500).json({ message: "Server error" });
     }
   },
+  async  resetCertificationAndCourseStatus(req, res) {
+    try {
+        const { courseId } = req.params;
+
+        if (!courseId) {
+            return res.status(400).json({ message: "Course ID is required." });
+        }
+
+        // Find the course
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({ message: "Course not found." });
+        }
+
+        // Find all certificates related to the course
+        const certificates = await Certificate.find({ course: courseId }).populate("student");
+
+        // Define the certificates directory
+        const certificatesDir = path.join(__dirname, "../certificates");
+
+        // Delete associated PDF files
+        await Promise.all(
+            certificates.map(async (cert) => {
+                if (cert.student && cert.course) {
+                    const studentId = cert.student._id;
+                    const courseName = course.courseName ? course.courseName.replace(/ /g, "_") : "Unknown_Course";
+                    const filePath = path.join(certificatesDir, `${studentId}_${courseName}.pdf`);
+
+                    try {
+                        // ✅ Use fs.access() to check if file exists before deleting
+                        await fs.access(filePath); 
+                        await fs.unlink(filePath);
+                        console.log(`✅ Deleted certificate PDF: ${filePath}`);
+                    } catch (err) {
+                        if (err.code === "ENOENT") {
+                            console.log(`⚠️ File not found, skipping: ${filePath}`);
+                        } else {
+                            console.error(`❌ Failed to delete certificate PDF: ${filePath}`, err);
+                        }
+                    }
+                }
+            })
+        );
+
+        // Delete all certificates related to the course
+        await Certificate.deleteMany({ course: courseId });
+
+        // Set course status to "incomplete"
+        course.courseStatus = "incomplete";
+        await course.save();
+
+        res.status(200).json({ message: "Certificates and PDFs removed, course status set to incomplete." });
+    } catch (error) {
+        console.error("❌ Error resetting certification and course status:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+}
+  ,
+   
 };
 
 module.exports = AdminController;

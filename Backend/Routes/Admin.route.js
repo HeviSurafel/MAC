@@ -8,6 +8,7 @@ const {
     resetPassword}=require('../Controllers/Auth.controller');
 const {protectRoute,adminRoute}=require('../Middleware/Protect.route');
 const  AdminController=require('../Controllers/Admin.controller');
+router.get("/dashboard",protectRoute,AdminController.getDashboard);
 router.post('/users',protectRoute,adminRoute, AdminController.createUser); // Create a new user
 router.get('/users',protectRoute, AdminController.getAllUsers); // Get all users
 router.get('/users/:id',protectRoute,adminRoute, AdminController.getUserById); // Get a user by ID
@@ -26,4 +27,6 @@ router.delete("/delete/contact/:id",protectRoute,adminRoute,AdminController.dele
 router.get('/status/:studentId/:courseId',protectRoute, adminRoute, AdminController.checkPaymentStatus);
 router.get('/student/unpaid/:courseId',protectRoute, adminRoute, AdminController.getUnpaidStudents);
 router.post('/student/pay/:studentId/:courseId',protectRoute, adminRoute, AdminController.makePayment);
+router.put("/course/reset-certificates/:courseId",protectRoute,adminRoute, AdminController.resetCertificationAndCourseStatus);
+
 module.exports=router;
