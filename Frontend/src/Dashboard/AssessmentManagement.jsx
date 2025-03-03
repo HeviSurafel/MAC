@@ -12,84 +12,93 @@ const AssessmentManagement = () => {
 
   const {
     courses, // Array of instructor courses
-    courseStudents, 
-    getInstructorCoursesAndStudents, 
-    fetchCourseStudents, 
-    updateAllAssessments, 
-    markCourseAsCompleted, 
-    generateCertificates, 
-    fetchCourseStatus 
+    courseStudents,
+    getInstructorCoursesAndStudents,
+    fetchCourseStudents,
+    updateAllAssessments,
+    markCourseAsCompleted,
+    generateCertificates,
+    fetchCourseStatus,
   } = useInstructorStore();
 
   const { courses: adminCourses, getCourses } = useAdminStore();
-  const { studentandgrades, fetchCoursesandGrades, loading: studentLoading } = useStudentStore();
+  const {
+    studentandgrades,
+    fetchCoursesandGrades,
+    loading: studentLoading,
+  } = useStudentStore();
 
-  // ✅ Manage selected course & section properly
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [editedAssessments, setEditedAssessments] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [courseStatus, setCourseStatus] = useState(""); // ✅ Store fetched courseStatus
+  const [courseStatus, setCourseStatus] = useState("");
 
   useEffect(() => {
     if (user?.role === "instructor") {
       getInstructorCoursesAndStudents();
     } else if (user?.role === "admin") {
       getCourses();
-    } else {
+    } else if (user?.role === "student") {
       fetchCoursesandGrades();
     }
   }, [user]);
 
-  // ✅ Reset selectedSection when changing selectedCourse
   useEffect(() => {
-    setSelectedSection(""); // Clear section when course changes
-    setCourseStatus(""); // Reset course status
+    setSelectedSection("");
+    setCourseStatus("");
   }, [selectedCourse]);
 
-  // ✅ Fetch course status dynamically when both course and section are selected
-  useEffect(() => {
-    if (selectedCourse && selectedSection) {
-      fetchCourseStatus(selectedCourse, selectedSection).then((status) => {
-        setCourseStatus(status || ""); // Ensure status updates correctly
-      });
-    }
-  }, [selectedCourse, selectedSection]);
+  if (user?.role === "instructor") {
+    useEffect(() => {
+      if (selectedCourse && selectedSection) {
+        fetchCourseStatus(selectedCourse, selectedSection).then((status) => {
+          setCourseStatus(status || "");
+        });
+      }
+    }, [selectedCourse, selectedSection]);
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {user?.role === "student" ? (
-        <StudentView user={user} studentandgrades={studentandgrades} loading={studentLoading} />
+        <StudentView
+          user={user}
+          studentandgrades={studentandgrades}
+          loading={studentLoading}
+        />
       ) : user?.role === "admin" ? (
         <AdminView
           user={user}
           courses={adminCourses}
           getCourses={getCourses}
           selectedCourse={selectedCourse}
-          setSelectedCourse={setSelectedCourse} 
+          setSelectedCourse={setSelectedCourse}
           selectedSection={selectedSection}
           setSelectedSection={setSelectedSection}
         />
-      ) : (
-        <InstructorView 
-          user={user} 
-          courseStatus={courseStatus} // ✅ Now dynamically updated
+      ) : user?.role === "instructor" ? (
+        <InstructorView
+          user={user}
+          courseStatus={courseStatus}
           courseStudents={courseStudents}
-          courses={courses} 
-          selectedCourse={selectedCourse} 
-          setSelectedCourse={setSelectedCourse} 
-          selectedSection={selectedSection} 
-          setSelectedSection={setSelectedSection} 
-          fetchCourseStudents={fetchCourseStudents} 
-          editedAssessments={editedAssessments} 
-          setEditedAssessments={setEditedAssessments} 
-          isSubmitted={isSubmitted} 
-          setIsSubmitted={setIsSubmitted} 
-          updateAllAssessments={updateAllAssessments} 
-          markCourseAsCompleted={markCourseAsCompleted} 
-          generateCertificates={generateCertificates} 
+          courses={courses}
+          selectedCourse={selectedCourse}
+          setSelectedCourse={setSelectedCourse}
+          selectedSection={selectedSection}
+          setSelectedSection={setSelectedSection}
+          fetchCourseStudents={fetchCourseStudents}
+          editedAssessments={editedAssessments}
+          setEditedAssessments={setEditedAssessments}
+          isSubmitted={isSubmitted}
+          setIsSubmitted={setIsSubmitted}
+          updateAllAssessments={updateAllAssessments}
+          markCourseAsCompleted={markCourseAsCompleted}
+          generateCertificates={generateCertificates}
           fetchCourseStatus={fetchCourseStatus}
         />
+      ) : (
+        <p>Unauthorized access. Please contact support.</p>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import useAdminStore from "../../../Store/AdminStore";
+
 const CourseModal = ({
   isOpen,
   onClose,
@@ -9,31 +10,46 @@ const CourseModal = ({
   courseCode,
 }) => {
   const { instructors, getAllInstructors } = useAdminStore();
-  useEffect(() => {
-    getAllInstructors();
-  }, []);
-  console.log(instructors);
   const [courseData, setCourseData] = useState({
     courseName: "",
     description: "",
-    instructorName: "",
+    instructors: [],
     status: "Active",
     courseCode: "",
-    paymentType: "one-time", // Default payment type
+    paymentType: "one-time",
     cost: "",
     durationInMonths: 3,
-    startDate: "", // Admin must assign this
-    endDate: "", // Admin must assign this
+    startDate: "",
+    endDate: "",
   });
 
-  // Update form fields when course prop changes
+  useEffect(() => {
+    getAllInstructors();
+  }, []);
+
   useEffect(() => {
     if (course) {
-      setCourseData({ ...course });
+      setCourseData({
+        ...course,
+        startDate: course.startDate ? course.startDate.split("T")[0] : "", // Convert to YYYY-MM-DD
+        endDate: course.endDate ? course.endDate.split("T")[0] : "", // Convert to YYYY-MM-DD
+      });
+    } else {
+      setCourseData({
+        courseName: "",
+        description: "",
+        instructors: [],
+        status: "Active",
+        courseCode: courseCode || "",
+        paymentType: "one-time",
+        cost: "",
+        durationInMonths: 3,
+        startDate: "",
+        endDate: "",
+      });
     }
-  }, [course]);
+  }, [course, courseCode]);
 
-  // Handle input changes
   const handleInputChange = (field, value) => {
     setCourseData({
       ...courseData,
@@ -130,7 +146,7 @@ const CourseModal = ({
           {/* Course Fee */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course Fee (₦)
+              Course Fee (Birr)
             </label>
             <input
               type="number"

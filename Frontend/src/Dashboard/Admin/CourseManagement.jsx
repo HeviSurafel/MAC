@@ -17,7 +17,7 @@ const generateCourseCode = () => {
 
 const CourseManagement = () => {
   const { user } = useUserStore();
-  const { deleteCourse, updateCourse, courses, getCourses, createCourse } = useAdminStore();
+  const { deleteCourse, updateCourse, courses, getCourses, createCourse, setCourses } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCourse, setEditingCourse] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,17 +30,18 @@ const CourseManagement = () => {
     cost: 0,
     paymentType: "monthly",
     registrationFee: 0,
-    durationInMonths: 3,  // Ensure this is correctly mapped
-    startDate: "",  // Admin must manually assign this
-    endDate: "",  // Admin must manually assign this
+    durationInMonths: 3,
+    startDate: "",
+    endDate: "",
   });
-  
 
   useEffect(() => {
     getCourses();
   }, []);
 
-  const filteredCourses = courses.filter(
+  console.log("Courses:", courses); // Debugging
+
+  const filteredCourses = (courses || []).filter(
     (course) =>
       course?.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course?.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -64,7 +65,9 @@ const CourseManagement = () => {
       cost: 0,
       paymentType: "monthly",
       registrationFee: 0,
-      duration: 3,
+      durationInMonths: 3,
+      startDate: "",
+      endDate: "",
     });
     setIsModalOpen(true);
   };
@@ -79,7 +82,7 @@ const CourseManagement = () => {
       cost: course.cost || 0,
       paymentType: course.paymentType || "monthly",
       registrationFee: course.registrationFee || 0,
-      duration: course.duration || 3,
+      durationInMonths: course.durationInMonths || 3,
       startDate: course.startDate || "",
       endDate: course.endDate || "",
     });
@@ -97,9 +100,9 @@ const CourseManagement = () => {
       cost: 0,
       paymentType: "monthly",
       registrationFee: 0,
-      duration: 3,
+      durationInMonths: 3,
       startDate: "",
-      endDate:"",
+      endDate: "",
     });
   };
 
@@ -107,12 +110,24 @@ const CourseManagement = () => {
     const courseToSave = editingCourse ? { ...editingCourse, ...newCourse } : newCourse;
     if (!courseToSave._id) delete courseToSave._id;
 
-    if (editingCourse) {
-      await updateCourse(courseToSave._id, courseToSave);
-    } else {
-      await createCourse(courseToSave);
+    try {
+      if (editingCourse) {
+        const updatedCourse = await updateCourse(courseToSave._id, courseToSave);
+        // Update the course in the state
+        setCourses((prevCourses) =>
+          prevCourses.map((course) =>
+            course._id === updatedCourse._id ? updatedCourse : course
+          )
+        );
+      } else {
+        const createdCourse = await createCourse(courseToSave);
+        // Add the new course to the state
+        setCourses((prevCourses) => [...prevCourses, createdCourse]);
+      }
+      closeModal();
+    } catch (error) {
+      console.error("Error saving course:", error);
     }
-    closeModal();
   };
 
   const handleCourseChange = (field, value) => {

@@ -5,7 +5,6 @@ const sections = ["A", "B", "C", "D", "E", "F", "G"];
 
 const InstructorView = ({
   user,
-  courseStatus,
   courses,
   selectedCourse,
   setSelectedCourse,
@@ -17,23 +16,30 @@ const InstructorView = ({
   updateAllAssessments,
   markCourseAsCompleted,
   generateCertificates,
-  fetchCourseStatus,
 }) => {
   const [courseStudents, setCourseStudents] = useState([]);
+  const [courseStatus, setCourseStatus] = useState("");
+
+  // Find the selected course's status
+  const selectedCourseDetails = courses.find(
+    (course) => course.courseId === selectedCourse && course.section === selectedSection
+  );
 
   useEffect(() => {
-    setCourseStudents([]); // ✅ Clear previous students when switching section
-    setEditedAssessments({}); // ✅ Reset assessments
-  
+    if (selectedCourseDetails) {
+      setCourseStatus(selectedCourseDetails.courseStatus);
+    }
+  }, [selectedCourseDetails]);
+
+  useEffect(() => {
     if (selectedCourse && selectedSection) {
-      fetchCourseStatus(selectedCourse, selectedSection);
-  
       fetchCourseStudents(selectedCourse, selectedSection).then((students) => {
-        console.log("Fetched students:", students); // Debugging log
-        setCourseStudents(students || []); // ✅ Ensure fresh data
+        console.log("Fetched students:", students);
+        setCourseStudents(students || []);
       });
     }
   }, [selectedCourse, selectedSection]);
+
   const handleAssessmentChange = (studentId, key, value) => {
     setEditedAssessments((prev) => {
       const updated = {
@@ -43,9 +49,12 @@ const InstructorView = ({
           [key]: Number(value),
         },
       };
+
+      // Calculate final score as the sum of assignmentScore and examScore
       updated[studentId].finalScore =
         (updated[studentId].assignmentScore ?? 0) +
         (updated[studentId].examScore ?? 0);
+
       return updated;
     });
   };
@@ -55,7 +64,6 @@ const InstructorView = ({
       toast.error("Please select a course and section.");
       return;
     }
-
 
     const assessments = courseStudents.map((student) => {
       const editedData = editedAssessments[student._id] || {};
@@ -72,7 +80,7 @@ const InstructorView = ({
     fetchCourseStudents(selectedCourse, selectedSection).then(setCourseStudents);
   };
 
-  const submitAllCertificates = () => {
+  const submitAllCertificates = async () => {
     if (!selectedCourse || !selectedSection) {
       toast.error("Please select a course and section.");
       return;
@@ -80,7 +88,7 @@ const InstructorView = ({
 
     const eligibleStudents = courseStudents.filter((student) => {
       const finalScore = editedAssessments[student._id]?.finalScore ?? student.finalScore ?? 0;
-      return finalScore > 50;
+      return finalScore > 50; // Only students with a final score above 50 qualify
     });
 
     if (eligibleStudents.length === 0) {
@@ -88,12 +96,18 @@ const InstructorView = ({
       return;
     }
 
-    markCourseAsCompleted(selectedCourse, selectedSection);
-    generateCertificates(selectedCourse, selectedSection, eligibleStudents);
+    // Mark the course as completed
+    await markCourseAsCompleted(selectedCourse, selectedSection);
+
+    // Generate certificates
+    await generateCertificates(selectedCourse, selectedSection, eligibleStudents);
+
+    // Immediately disable inputs and buttons by updating the course status
+    setCourseStatus("completed");
   };
 
   const isEditable = courseStatus === "incomplete";
-  console.log("consoling coursestudent", courseStudents,courses);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-8">Instructor: {user?.name}</h1>
@@ -145,33 +159,41 @@ const InstructorView = ({
             </thead>
             <tbody>
               {courseStudents.length > 0 ? (
-                courseStudents.map((student) => (
-                  <tr key={student._id} className="text-center">
-                    <td className="border p-3">{student.firstName}</td>
-                    <td className="border p-3">{student.lastName}</td>
-                    <td className="border p-3">
-                      <input
-                        type="number"
-                        value={editedAssessments[student._id]?.assignmentScore ?? student.assignmentScore ?? 0}
-                        onChange={(e) => handleAssessmentChange(student._id, "assignmentScore", e.target.value)}
-                        className="w-full border rounded p-2"
-                        disabled={!isEditable}
-                      />
-                    </td>
-                    <td className="border p-3">
-                      <input
-                        type="number"
-                        value={editedAssessments[student._id]?.examScore ?? student.examScore ?? 0}
-                        onChange={(e) => handleAssessmentChange(student._id, "examScore", e.target.value)}
-                        className="w-full border rounded p-2"
-                        disabled={!isEditable}
-                      />
-                    </td>
-                    <td className="border p-3 font-bold">
-                      {editedAssessments[student._id]?.finalScore ?? student.finalScore ?? 0}
-                    </td>
-                  </tr>
-                ))
+                courseStudents.map((student) => {
+                  const assignmentScore =
+                    editedAssessments[student._id]?.assignmentScore ?? student.assignmentScore ?? 0;
+                  const examScore =
+                    editedAssessments[student._id]?.examScore ?? student.examScore ?? 0;
+                  const finalScore = assignmentScore + examScore;
+
+                  return (
+                    <tr key={student._id} className="text-center">
+                      <td className="border p-3">{student.firstName}</td>
+                      <td className="border p-3">{student.lastName}</td>
+                      <td className="border p-3">
+                        <input
+                          type="number"
+                          value={assignmentScore}
+                          onChange={(e) => handleAssessmentChange(student._id, "assignmentScore", e.target.value)}
+                          className="w-full border rounded p-2"
+                          disabled={!isEditable} // Disable if course is completed
+                        />
+                      </td>
+                      <td className="border p-3">
+                        <input
+                          type="number"
+                          value={examScore}
+                          onChange={(e) => handleAssessmentChange(student._id, "examScore", e.target.value)}
+                          className="w-full border rounded p-2"
+                          disabled={!isEditable} // Disable if course is completed
+                        />
+                      </td>
+                      <td className="border p-3 font-bold">
+                        {finalScore}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="5" className="border p-3 text-center text-gray-500">
@@ -181,6 +203,32 @@ const InstructorView = ({
               )}
             </tbody>
           </table>
+
+          {/* Buttons for Update and Generate Certificates */}
+          <div className="mt-6 flex justify-end space-x-4">
+            <button
+              onClick={saveAllAssessments}
+              className={`px-4 py-2 rounded-md transition duration-200 ${
+                isEditable
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              disabled={!isEditable} // Disable if course is completed
+            >
+              Update Assessments
+            </button>
+            <button
+              onClick={submitAllCertificates}
+              className={`px-4 py-2 rounded-md transition duration-200 ${
+                isEditable
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              disabled={!isEditable} // Disable if course is completed
+            >
+              Generate Certificates
+            </button>
+          </div>
         </div>
       )}
     </div>

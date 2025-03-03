@@ -1,12 +1,13 @@
 import React from 'react';
 import { FaTools, FaRocket, FaShieldAlt, FaRegClock } from 'react-icons/fa';
 import {Link} from "react-router-dom"
+import image from "../assets/6K6A3618.JPG"
 const ServicePage = () => {
   return (
     <div className="bg-gray-50">
 
       {/* Hero Section */}
-      <section className="relative bg-cover bg-center h-screen text-white" style={{ backgroundImage: 'url()' }}>
+      <section className="relative bg-cover bg-center h-screen text-white" style={{ backgroundImage: `url(${image})` }}>
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6 text-center flex items-center justify-center h-full">
           <div className="text-center">

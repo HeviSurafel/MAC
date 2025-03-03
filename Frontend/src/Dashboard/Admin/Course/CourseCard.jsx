@@ -9,7 +9,7 @@ const CourseCard = ({ course, openEditModal, deleteCourse }) => {
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
       <div className="p-6">
         {/* Course Title */}
-        <h2 className="text-2xl font-bold text-gray-800 mb-2 font-serif">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2 font-serif uppercase">
           {course.courseName}
         </h2>
 
