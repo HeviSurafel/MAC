@@ -46,6 +46,7 @@ const useAdminStore = create((set, get) => ({
       (data) => set({ users: data })
     ),
 
+
      fetchAnalytics :async () => {
       if (get().analytics) return; // ✅ Prevent re-fetching if data exists
       set({ loading: true });
@@ -114,27 +115,33 @@ const useAdminStore = create((set, get) => ({
 
   // Create a new course
   createCourse: async (courseData) => {
-    const response = await axios.post("/courses", courseData);
-    set((state) => ({ courses: [...state.courses, response.data] }));
-    return response.data;
+    try {
+      const response = await axios.post("/courses", courseData);
+      set((state) => ({ courses: [...state.courses, response.data] }));
+      toast.success("Course created successfully!");
+      return response.data;
+    } catch (error) {
+      toast.error("Failed to create course.");
+      console.error("Create Course Error:", error);
+    }
   },
 
-  // Update a course
-  updateCourse: (id, courseData) => {
+  updateCourse: async (id, courseData) => {
     if (!window.confirm("Are you sure you want to update this course?")) return;
-    get().handleRequest(
-      () => axios.put(`/courses/${id}`, courseData),
-      "Course updated successfully.",
-      "Failed to update course.",
-      (data) =>
-        set({
-          courses: get().courses.map((course) =>
-            course._id === id ? data : course
-          ),
-        }) // Update the course in the list
-    );
+    
+    try {
+      const response = await axios.put(`/courses/${id}`, courseData);
+      set({
+        courses: get().courses.map((course) =>
+          course._id === id ? response.data : course
+        ),
+      });
+      toast.success("Course updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update course.");
+      console.error("Update Course Error:", error);
+    }
   },
-
   // Fetch unpaid students for a course
   fetchUnpaidStudents: (courseId) =>
     get().handleRequest(
@@ -204,7 +211,7 @@ const useAdminStore = create((set, get) => ({
       const response = await axios.get("/student/feedback");
       set({ feedbacks: response.data }); // Update feedbacks list
     } catch (error) {
-      toast.error("Failed to fetch feedback.");
+      toast.error("Failed to fetch feedback.",error);
     }
   },
 

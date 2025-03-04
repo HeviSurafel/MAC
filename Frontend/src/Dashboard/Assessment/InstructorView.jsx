@@ -67,14 +67,17 @@ const InstructorView = ({
 
     const assessments = courseStudents.map((student) => {
       const editedData = editedAssessments[student._id] || {};
+      const assignmentScore = editedData.assignmentScore ?? student.assignmentScore ?? 0;
+      const examScore = editedData.examScore ?? student.examScore ?? 0;
+    
       return {
         studentId: student._id,
-        assignmentScore: editedData.assignmentScore ?? student.assignmentScore ?? 0,
-        examScore: editedData.examScore ?? student.examScore ?? 0,
-        finalScore: editedData.finalScore ?? student.finalScore ?? 0,
+        assignmentScore,
+        examScore,
+        finalScore: assignmentScore + examScore, 
       };
     });
-
+    
     await updateAllAssessments(assessments, selectedCourse, selectedSection);
     setEditedAssessments({});
     fetchCourseStudents(selectedCourse, selectedSection).then(setCourseStudents);
@@ -90,6 +93,7 @@ const InstructorView = ({
       const finalScore = editedAssessments[student._id]?.finalScore ?? student.finalScore ?? 0;
       return finalScore > 50; // Only students with a final score above 50 qualify
     });
+    console.log("Eligible students:", eligibleStudents);
 
     if (eligibleStudents.length === 0) {
       toast.error("No students qualify for a certificate.");

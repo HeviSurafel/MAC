@@ -4,7 +4,6 @@ import { useUserStore } from "../../../Store/useAuthStore";
 
 const CourseCard = ({ course, openEditModal, deleteCourse }) => {
   const { user } = useUserStore();
-
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
       <div className="p-6">

@@ -17,7 +17,7 @@ router.delete('/users/:id',protectRoute,adminRoute, AdminController.deleteUser);
 router.post('/courses',protectRoute,adminRoute, AdminController.createCourse); // Create a new course
 router.get('/courses', protectRoute,AdminController.getAllCourses); // Get all courses
 router.get('/all/instructors',protectRoute,adminRoute, AdminController.getInstructors); // Get all courses by instructor
-router.get('/courses/:id',protectRoute,adminRoute, AdminController.getCourseById); // Get a course by ID
+router.get('/courses/:id',protectRoute, AdminController.getCourseById); // Get a course by ID
 router.put('/courses/:id',protectRoute,adminRoute, AdminController.updateCourse); // Update a course
 router.delete('/courses/:id',protectRoute,adminRoute, AdminController.deleteCourse);
 router.get("/student/feedback",protectRoute,adminRoute,AdminController.getFeedback);

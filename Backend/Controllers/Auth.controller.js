@@ -4,6 +4,8 @@ const User = require('../Model/User.model');
 const redis = require('../Middleware/Redis');
 const transporter = require('../config/nodemailer');
 const Contact=require("../Model/ContactUs.model")
+const asyncHandler = require('express-async-handler');
+const { AsyncResource } = require('async_hooks');
 // Generate tokens
 const generateToken = async (userId) => {
   const accessToken = jwt.sign({ userId }, "accessTokenSecret", {
@@ -37,7 +39,7 @@ const storeCookies = (res, accessToken, refreshToken) => {
 };
 
 // Signup
-const signup = async (req, res) => {
+const signup =asyncHandler(async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
   try {
     const userExist = await User.findOne({ email });
@@ -59,10 +61,10 @@ const signup = async (req, res) => {
     console.error('Signup Error:', error);
     res.status(500).json({ message: 'Something went wrong',error });
   }
-};
+});
 
 // Login
-const login = async (req, res) => {
+const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -91,10 +93,10 @@ const login = async (req, res) => {
     console.error('Login Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Logout
-const logout = async (req, res) => {
+const logout =asyncHandler( async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   try {
     if (refreshToken) {
@@ -108,10 +110,10 @@ const logout = async (req, res) => {
     console.error('Logout Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Refresh Token
-const refreshToken = async (req, res) => {
+const refreshToken = asyncHandler( async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   try {
     if (!refreshToken) {
@@ -134,20 +136,20 @@ const refreshToken = async (req, res) => {
     console.error('Refresh Token Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Get Profile
-const getProfile = async (req, res) => {
+const getProfile = asyncHandler( async (req, res) => {
   try {
     res.json(req.user);
   } catch (error) {
     console.error('Get Profile Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Get All Users (Admin Only)
-const getAllUser = async (req, res) => {
+const getAllUser = asyncHandler( async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Unauthorized: Admin only' });
@@ -158,10 +160,10 @@ const getAllUser = async (req, res) => {
     console.error('Get All Users Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Request Password Reset
-const requestPasswordReset = async (req, res) => {
+const requestPasswordReset =asyncHandler(  async (req, res) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -189,8 +191,8 @@ const requestPasswordReset = async (req, res) => {
     console.error('Request Password Reset Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
-const updatePassword = async (req, res) => {
+});
+const updatePassword = asyncHandler( async (req, res) => {
   const {oldPassword,newpassword,email } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -208,10 +210,10 @@ const updatePassword = async (req, res) => {
     console.error('Update Password Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
+});
 
 // Reset Password
-const resetPassword = async (req, res) => {
+const resetPassword = asyncHandler( async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
   try {
@@ -231,8 +233,8 @@ const resetPassword = async (req, res) => {
     console.error('Reset Password Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
-const updateProfile = async (req, res) => {
+});
+const updateProfile = asyncHandler( async (req, res) => {
   const {email}=req.user
   const { address, phone } = req.body;
   try {
@@ -248,8 +250,8 @@ const updateProfile = async (req, res) => {
     console.error('Update Profile Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
-};
-const ContactUs = async (req, res) => {
+});
+const ContactUs = asyncHandler( async (req, res) => {
   const {name,subject, email, message } = req.body;
   try {
     const { name, email, subject, message } = req.body;
@@ -264,7 +266,7 @@ const ContactUs = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Server error. Try again later." });
   }
-}
+})
 module.exports = {
   signup,
   login,

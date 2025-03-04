@@ -6,10 +6,10 @@ import 'slick-carousel/slick/slick-theme.css'
 import image from "../assets/image01.jpg"
 function Features() {
   const testimonials = [
-    { name: 'John Doe', feedback: 'The courses were extremely informative and practical!', rating: 5, image: image },
-    { name: 'Jane Smith', feedback: 'I loved the hands-on approach in the web development course.', rating: 4, image: image },
-    { name: 'Mike Johnson', feedback: 'App development lessons were clear and well-organized.', rating: 5, image: image },
-    { name: 'Emily Davis', feedback: 'Graphics course helped me launch my freelance career.', rating: 4,image: image }
+    { name: 'Yared Tsehay', feedback: 'The courses were extremely informative and practical!', rating: 5, image: image },
+    { name: 'Nahome', feedback: 'I loved the hands-on approach in the web development course.', rating: 4, image: image },
+    { name: 'Tegegne Birhanu', feedback: 'App development lessons were clear and well-organized.', rating: 5, image: image },
+    { name: 'Befkir Alemayehu', feedback: 'Graphics course helped me launch my freelance career.', rating: 4,image: image }
   ]
 
   const settings = {

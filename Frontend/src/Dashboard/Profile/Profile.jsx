@@ -13,10 +13,11 @@ const Profile = () => {
   const { certificate, fetchCertificate } = useStudentStore();
 
   useEffect(() => {
-    fetchCertificate(user.id);
-  }, []);
-
-  console.log("User:", user);
+    if (user?.id) {
+      fetchCertificate(user.id);
+    }
+  }, [user.id]);
+  
   console.log("Certificate URL:", certificate);
 
   const handleEdit = (section) => {

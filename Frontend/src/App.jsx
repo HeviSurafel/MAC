@@ -34,7 +34,7 @@ function App() {
   // if (checkingAuth) return <LoadingSpinner />;
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen capitalize">
       <div className="flex-grow">
         <Routes>
           {/* Public Routes */}

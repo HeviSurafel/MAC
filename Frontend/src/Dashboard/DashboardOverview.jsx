@@ -12,8 +12,6 @@ const DashboardOverview = () => {
     if (!analytics) fetchAnalytics(); // ✅ Fetch only if analytics is not loaded
   }, [analytics, fetchAnalytics]);
 
-  console.log(analytics); // Debugging purpose
-
   // Process data for Bar Chart
   const chartData = useMemo(() => {
     return analytics?.userGrowth?.map((entry) => ({

@@ -9,48 +9,56 @@ const Payment = require("../Model/Payment.model");
 const Certificate = require("../Model/Certeficate.model");
 const fs = require("fs").promises;
 const path = require("path");
+const asyncHandler = require("express-async-handler");
 const AdminController = {
-
-  async getDashboard(req, res) {
+  getDashboard: asyncHandler(async (req, res) => {
     try {
       const totalUsers = await User.countDocuments();
       const totalStudents = await User.countDocuments({ role: "student" });
-      const totalInstructors = await User.countDocuments({ role: "instructor" });
+      const totalInstructors = await User.countDocuments({
+        role: "instructor",
+      });
       const totalAdmins = await User.countDocuments({ role: "admin" });
-  
+
       const totalCourses = await Course.countDocuments();
       const totalPayments = await Payment.countDocuments();
       const totalRevenue = await Payment.aggregate([
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]);
-  
+
       const activeUsers = await User.countDocuments({ status: "active" });
       const suspendedUsers = await User.countDocuments({ status: "suspended" });
-  
+
       // 📌 Monthly User Registration Trend (Last 6 Months)
       const userGrowth = await User.aggregate([
         {
           $group: {
-            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
             count: { $sum: 1 },
           },
         },
         { $sort: { "_id.year": -1, "_id.month": -1 } },
         { $limit: 6 },
       ]);
-  
+
       // 📌 Monthly Revenue Trend (Last 6 Months)
       const revenueTrend = await Payment.aggregate([
         {
           $group: {
-            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
             total: { $sum: "$amount" },
           },
         },
         { $sort: { "_id.year": -1, "_id.month": -1 } },
         { $limit: 6 },
       ]);
-  
+
       res.json({
         totalUsers,
         totalStudents,
@@ -68,8 +76,8 @@ const AdminController = {
       console.error("Analytics Fetch Error:", error);
       res.status(500).json({ message: "Failed to fetch analytics data" });
     }
-  },
-  async createUser(req, res) {
+  }),
+  createUser: asyncHandler(async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -192,17 +200,20 @@ const AdminController = {
             await payment.save({ session });
           }
         } else if (role === "instructor") {
+          if (course.instructors.length > 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+              message: "An instructor is already assigned to this course.",
+            });
+          }
+
+          course.instructors.push(user._id);
+          await course.save({ session });
+
           if (!existingSection.instructors.includes(user._id)) {
             existingSection.instructors.push(user._id);
             await existingSection.save({ session });
-          }
-
-          if (!course.instructors.includes(user._id)) {
-            await Course.findByIdAndUpdate(
-              courseId,
-              { $push: { instructors: user._id } },
-              { new: true, session }
-            );
           }
         }
       }
@@ -214,179 +225,93 @@ const AdminController = {
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: error.message });
+      throw error;
     }
-  },
+  }),
 
-  async getAllUsers(req, res) {
-    try {
-      const users = await User.find();
-      res.status(200).json(users);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
+  createCourse: asyncHandler(async (req, res) => {
+    const {
+      courseName,
+      courseCode,
+      description,
+      subDescription,
+      startDate,
+      endDate,
+      status,
+      instructors,
+      cost,
+      duration = 3,
+      paymentType,
+      registrationFee,
+    } = req.body;
 
-  async getUserById(req, res) {
-    try {
-      const user = await User.findById(req.params.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      res.status(200).json(user);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
-
-  async updateUser(req, res) {
-    try {
-      const updatedUser = await User.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { new: true }
-      );
-      if (!updatedUser)
-        return res.status(404).json({ message: "User not found" });
-      res
-        .status(200)
-        .json({ message: "User updated successfully", updatedUser });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  },
-
-  async deleteUser(req, res) {
-    try {
-      const user = await User.findById(req.params.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      await Course.updateMany(
-        { studentsEnrolled: user._id },
-        { $pull: { studentsEnrolled: user._id } }
-      );
-
-      await Assessment.updateMany(
-        { "studentResults.student": user._id },
-        { $pull: { studentResults: { student: user._id } } }
-      );
-
-      await Section.updateMany(
-        { students: user._id },
-        { $pull: { students: user._id } }
-      );
-
-      if (user.role === "instructor") {
-        await Course.updateMany(
-          { instructors: user._id },
-          { $pull: { instructors: user._id } }
-        );
-        await Section.updateMany(
-          { instructors: user._id },
-          { $pull: { instructors: user._id } }
-        );
-      }
-
-      await user.deleteOne();
-
-      res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-      console.error("Delete User Error:", error);
-      res.status(500).json({ message: error.message });
-    }
-  },
-
-  async createCourse(req, res) {
-    try {
-      const {
-        courseName,
-        courseCode,
-        description,
-        subDescription,
-        startDate,
-        endDate,
-        status,
-        cost,
-        duration=3,
-        paymentType,
-        registrationFee,
-      } = req.body;
-
-      if (!courseName || !courseCode || !cost || !paymentType) {
-        return res
-          .status(400)
-          .json({
-            message: "Title, course code, cost, and payment type are required.",
-          });
-      }
-
-      const costValue = Number(cost);
-      const registrationFeeValue = Number(registrationFee);
-
-      if (isNaN(costValue) || costValue < 0) {
-        return res
-          .status(400)
-          .json({ message: "Cost must be a positive number." });
-      }
-
-      if (
-        registrationFee &&
-        (isNaN(registrationFeeValue) || registrationFeeValue < 0)
-      ) {
-        return res
-          .status(400)
-          .json({ message: "Registration fee must be a positive number." });
-      }
-
-      if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-        return res
-          .status(400)
-          .json({ message: "End date must be after start date." });
-      }
-
-      if (!["monthly", "one-time"].includes(paymentType)) {
-        return res
-          .status(400)
-          .json({
-            message: "Invalid payment type. Allowed: 'monthly', 'one-time'.",
-          });
-      }
-
-      if (paymentType === "monthly" && (!duration || duration <= 0)) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Duration must be specified for monthly payments and be greater than 0.",
-          });
-      }
-
-      const course = new Course({
-        courseName,
-        courseCode,
-        description,
-        subDescription,
-        startDate,
-        endDate,
-        status,
-        cost: costValue,
-        paymentType,
-        registrationFee: registrationFeeValue,
-        durationInMonths: paymentType === "monthly" ? duration : null,
-        studentsEnrolled: [],
+    if (!courseName || !courseCode || !cost || !paymentType) {
+      return res.status(400).json({
+        message: "Title, course code, cost, and payment type are required.",
       });
-
-      await course.save();
-      res.status(201).json({ message: "Course created successfully", course });
-    } catch (error) {
-      console.error("Create Course Error:", error);
-      res.status(500).json({ message: "Something went wrong" });
     }
-  },
 
-  async getAllCourses(req, res) {
+    const costValue = Number(cost);
+    const registrationFeeValue = Number(registrationFee);
+
+    if (isNaN(costValue) || costValue < 0) {
+      return res
+        .status(400)
+        .json({ message: "Cost must be a positive number." });
+    }
+
+    if (
+      registrationFee &&
+      (isNaN(registrationFeeValue) || registrationFeeValue < 0)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Registration fee must be a positive number." });
+    }
+
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      return res
+        .status(400)
+        .json({ message: "End date must be after start date." });
+    }
+
+    if (!["monthly", "one-time"].includes(paymentType)) {
+      return res.status(400).json({
+        message: "Invalid payment type. Allowed: 'monthly', 'one-time'.",
+      });
+    }
+
+    if (paymentType === "monthly" && (!duration || duration <= 0)) {
+      return res.status(400).json({
+        message:
+          "Duration must be specified for monthly payments and be greater than 0.",
+      });
+    }
+
+    const course = new Course({
+      courseName,
+      courseCode,
+      description,
+      subDescription,
+      startDate,
+      endDate,
+      status,
+      cost: costValue,
+      paymentType,
+      registrationFee: registrationFeeValue,
+      durationInMonths: paymentType === "monthly" ? duration : null,
+      studentsEnrolled: [],
+      instructors,
+    });
+
+    await course.save();
+    res.status(201).json({ message: "Course created successfully", course });
+  }),
+
+  getAllCourses: asyncHandler(async (req, res) => {
     try {
       const { courseId, section } = req.query;
-  
+
       let query = {};
       if (courseId) {
         if (!mongoose.isValidObjectId(courseId)) {
@@ -394,9 +319,9 @@ const AdminController = {
         }
         query._id = new mongoose.Types.ObjectId(courseId);
       }
-  
+
       let studentFilter = {};
-  
+
       // If section and courseId are provided, filter students by section
       if (section && courseId) {
         const sectionDoc = await Section.findOne({
@@ -405,13 +330,15 @@ const AdminController = {
         })
           .select("students")
           .lean();
-  
+
         if (sectionDoc) {
-          const studentIds = sectionDoc.students.map((id) => new mongoose.Types.ObjectId(id));
+          const studentIds = sectionDoc.students.map(
+            (id) => new mongoose.Types.ObjectId(id)
+          );
           studentFilter["_id"] = { $in: studentIds };
         }
       }
-  
+
       // Fetch courses with enrolled students
       const courses = await Course.find(query)
         .populate({
@@ -422,11 +349,12 @@ const AdminController = {
         })
         .populate("instructors", "firstName lastName email")
         .lean();
-  
+
       // Fetch assessments for the requested courses and sections
-      const assessments = courseId && mongoose.isValidObjectId(courseId)
-      ? await Assessment.find({ course: courseId }).lean()
-      : [];
+      const assessments =
+        courseId && mongoose.isValidObjectId(courseId)
+          ? await Assessment.find({ course: courseId }).lean()
+          : [];
       // Process each course
       const coursesWithAssessments = await Promise.all(
         courses.map(async (course) => {
@@ -439,12 +367,15 @@ const AdminController = {
               })
                 .select("section")
                 .lean();
-  
+
               // Find assessment for this student
               const studentAssessment = assessments
                 .flatMap((assessment) => assessment.studentResults)
-                .find((result) => result.student.toString() === student._id.toString());
-  
+                .find(
+                  (result) =>
+                    result.student.toString() === student._id.toString()
+                );
+
               return {
                 ...student,
                 section: sectionDoc ? sectionDoc.section : "N/A",
@@ -454,25 +385,83 @@ const AdminController = {
               };
             })
           );
-  
+
           return {
             ...course,
             studentsEnrolled: studentsWithAssessments, // Replace with students including assessments
           };
         })
       );
-  
+
       res.status(200).json(coursesWithAssessments);
     } catch (error) {
       console.error("Error fetching courses with assessments:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
-  }
-  
-  ,
-  
+  }),
+  getAllUsers: asyncHandler(async (req, res) => {
+    const users = await User.find();
+    res.status(200).json(users);
+  }),
 
-  async getCourseById(req, res) {
+  // Get user by ID
+  getUserById: asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json(user);
+  }),
+
+  // Update user
+  updateUser: asyncHandler(async (req, res) => {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedUser)
+      return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ message: "User updated successfully", updatedUser });
+  }),
+
+  // Delete user
+  deleteUser: asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await Course.updateMany(
+      { studentsEnrolled: user._id },
+      { $pull: { studentsEnrolled: user._id } }
+    );
+
+    await Assessment.updateMany(
+      { "studentResults.student": user._id },
+      { $pull: { studentResults: { student: user._id } } }
+    );
+
+    await Section.updateMany(
+      { students: user._id },
+      { $pull: { students: user._id } }
+    );
+
+    await Payment.deleteMany({ userId: user._id });
+    await Certificate.deleteMany({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+
+    if (user.role === "instructor") {
+      await Course.updateMany(
+        { instructors: user._id },
+        { $pull: { instructors: user._id } }
+      );
+      await Section.updateMany(
+        { instructors: user._id },
+        { $pull: { instructors: user._id } }
+      );
+    }
+
+    res.status(200).json({ message: "User deleted successfully" });
+  }),
+
+  getCourseById: asyncHandler(async (req, res) => {
     try {
       const course = await Course.findById(req.params.id).populate(
         "studentsEnrolled"
@@ -482,9 +471,9 @@ const AdminController = {
     } catch (error) {
       res.status(500).json({ message: "Something went wrong" });
     }
-  },
+  }),
 
-  async updateCourse(req, res) {
+  updateCourse: asyncHandler(async (req, res) => {
     try {
       const {
         startDate,
@@ -541,7 +530,7 @@ const AdminController = {
       console.error("Update Course Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
-  },
+  }),
 
   async getFeedback(req, res) {
     try {
@@ -555,7 +544,7 @@ const AdminController = {
     }
   },
 
-  async getcontactUs(req, res) {
+  getcontactUs: asyncHandler(async (req, res) => {
     try {
       const contactUs = await Contact.find();
       res.status(200).json(contactUs);
@@ -565,9 +554,9 @@ const AdminController = {
         message: "Failed to retrieve contactUs. Please try again later.",
       });
     }
-  },
+  }),
 
-  async deleteContactUs(req, res) {
+  deleteContactUs: asyncHandler(async (req, res) => {
     try {
       const contactUs = await Contact.findByIdAndDelete(req.params.id);
       if (!contactUs)
@@ -576,9 +565,9 @@ const AdminController = {
     } catch (error) {
       res.status(500).json({ message: "Something went wrong" });
     }
-  },
+  }),
 
-  async deleteFeedback(req, res) {
+  deleteFeedback: asyncHandler(async (req, res) => {
     try {
       const feedback = await Feedback.findByIdAndDelete(req.params.id);
       if (!feedback)
@@ -587,9 +576,9 @@ const AdminController = {
     } catch (error) {
       res.status(500).json({ message: "Something went wrong" });
     }
-  },
+  }),
 
-  async deleteCourse(req, res) {
+  deleteCourse: asyncHandler(async (req, res) => {
     try {
       const course = await Course.findById(req.params.id);
       if (!course) return res.status(404).json({ message: "Course not found" });
@@ -610,18 +599,18 @@ const AdminController = {
       console.error("Delete Course Error:", error);
       res.status(500).json({ message: "Something went wrong" });
     }
-  },
+  }),
 
-  async getInstructors(req, res) {
+  getInstructors: asyncHandler(async (req, res) => {
     try {
       const instructors = await User.find({ role: "instructor" });
       res.status(200).json(instructors);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  },
+  }),
 
-  async checkPaymentStatus(req, res) {
+  checkPaymentStatus: asyncHandler(async (req, res) => {
     try {
       const { studentId, courseId } = req.params;
 
@@ -655,9 +644,9 @@ const AdminController = {
       console.error(error);
       res.status(500).json({ message: "Server error" });
     }
-  },
+  }),
 
-  async getUnpaidStudents(req, res) {
+  getUnpaidStudents: asyncHandler(async (req, res) => {
     try {
       const { courseId } = req.params;
 
@@ -674,7 +663,12 @@ const AdminController = {
       for (let i = 0; i < course.durationInMonths; i++) {
         const monthDate = new Date(startDate);
         monthDate.setMonth(startDate.getMonth() + i);
-        courseMonths.push(monthDate.toLocaleString("default", { month: "short", year: "numeric" }));
+        courseMonths.push(
+          monthDate.toLocaleString("default", {
+            month: "short",
+            year: "numeric",
+          })
+        );
       }
 
       const unpaidStudents = [];
@@ -710,9 +704,9 @@ const AdminController = {
       console.error("Error fetching unpaid students:", error);
       res.status(500).json({ message: "Server error" });
     }
-  },
+  }),
 
-  async makePayment(req, res) {
+  makePayment: asyncHandler(async (req, res) => {
     try {
       const { studentId, courseId } = req.params;
       const { amount, selectedMonths } = req.body;
@@ -750,7 +744,12 @@ const AdminController = {
       for (let i = 0; i < 3; i++) {
         const monthDate = new Date(startDate);
         monthDate.setMonth(startDate.getMonth() + i);
-        courseMonths.push(monthDate.toLocaleString("default", { month: "short", year: "numeric" }));
+        courseMonths.push(
+          monthDate.toLocaleString("default", {
+            month: "short",
+            year: "numeric",
+          })
+        );
       }
 
       const unpaidMonths = courseMonths.filter(
@@ -766,66 +765,80 @@ const AdminController = {
       console.error("Error making payment:", error);
       res.status(500).json({ message: "Server error" });
     }
-  },
-  async  resetCertificationAndCourseStatus(req, res) {
+  }),
+  resetCertificationAndCourseStatus: asyncHandler(async (req, res) => {
     try {
-        const { courseId } = req.params;
+      const { courseId } = req.params;
 
-        if (!courseId) {
-            return res.status(400).json({ message: "Course ID is required." });
-        }
+      if (!courseId) {
+        return res.status(400).json({ message: "Course ID is required." });
+      }
 
-        // Find the course
-        const course = await Course.findById(courseId);
-        if (!course) {
-            return res.status(404).json({ message: "Course not found." });
-        }
+      // Find the course
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found." });
+      }
 
-        // Find all certificates related to the course
-        const certificates = await Certificate.find({ course: courseId }).populate("student");
+      // Find all certificates related to the course
+      const certificates = await Certificate.find({
+        course: courseId,
+      }).populate("student");
 
-        // Define the certificates directory
-        const certificatesDir = path.join(__dirname, "../certificates");
+      // Define the certificates directory
+      const certificatesDir = path.join(__dirname, "../certificates");
 
-        // Delete associated PDF files
-        await Promise.all(
-            certificates.map(async (cert) => {
-                if (cert.student && cert.course) {
-                    const studentId = cert.student._id;
-                    const courseName = course.courseName ? course.courseName.replace(/ /g, "_") : "Unknown_Course";
-                    const filePath = path.join(certificatesDir, `${studentId}_${courseName}.pdf`);
+      // Delete associated PDF files
+      await Promise.all(
+        certificates.map(async (cert) => {
+          if (cert.student && cert.course) {
+            const studentId = cert.student._id;
+            const courseName = course.courseName
+              ? course.courseName.replace(/ /g, "_")
+              : "Unknown_Course";
+            const filePath = path.join(
+              certificatesDir,
+              `${studentId}_${courseName}.pdf`
+            );
 
-                    try {
-                        // ✅ Use fs.access() to check if file exists before deleting
-                        await fs.access(filePath); 
-                        await fs.unlink(filePath);
-                        console.log(`✅ Deleted certificate PDF: ${filePath}`);
-                    } catch (err) {
-                        if (err.code === "ENOENT") {
-                            console.log(`⚠️ File not found, skipping: ${filePath}`);
-                        } else {
-                            console.error(`❌ Failed to delete certificate PDF: ${filePath}`, err);
-                        }
-                    }
-                }
-            })
-        );
+            try {
+              // ✅ Use fs.access() to check if file exists before deleting
+              await fs.access(filePath);
+              await fs.unlink(filePath);
+              console.log(`✅ Deleted certificate PDF: ${filePath}`);
+            } catch (err) {
+              if (err.code === "ENOENT") {
+                console.log(`⚠️ File not found, skipping: ${filePath}`);
+              } else {
+                console.error(
+                  `❌ Failed to delete certificate PDF: ${filePath}`,
+                  err
+                );
+              }
+            }
+          }
+        })
+      );
 
-        // Delete all certificates related to the course
-        await Certificate.deleteMany({ course: courseId });
+      // Delete all certificates related to the course
+      await Certificate.deleteMany({ course: courseId });
 
-        // Set course status to "incomplete"
-        course.courseStatus = "incomplete";
-        await course.save();
+      // Set course status to "incomplete"
+      course.courseStatus = "incomplete";
+      await course.save();
 
-        res.status(200).json({ message: "Certificates and PDFs removed, course status set to incomplete." });
+      res.status(200).json({
+        message:
+          "Certificates and PDFs removed, course status set to incomplete.",
+      });
     } catch (error) {
-        console.error("❌ Error resetting certification and course status:", error);
-        res.status(500).json({ message: "Server error" });
+      console.error(
+        "❌ Error resetting certification and course status:",
+        error
+      );
+      res.status(500).json({ message: "Server error" });
     }
-}
-  ,
-   
+  }),
 };
 
 module.exports = AdminController;

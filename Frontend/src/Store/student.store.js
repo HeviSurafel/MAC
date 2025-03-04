@@ -27,13 +27,18 @@ const useStudentStore = create((set) => ({
   fetchCertificate: async (studentId) => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get(
-        `/student/certificate/${studentId}`,
-        { responseType: "blob" }
-      );
-
-      const imageUrl = URL.createObjectURL(response.data);
-      set({ certificate: imageUrl, loading: false });
+  
+      const response = await axios.get(`/student/certificate/${studentId}`, {
+        responseType: "blob",
+      });
+  
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(blob);
+  
+      set({ certificate: pdfUrl, loading: false });
+  
+      // ✅ Clean up URL when component unmounts
+      return () => URL.revokeObjectURL(pdfUrl);
     } catch (error) {
       console.error("Error fetching certificate:", error);
       set({
@@ -42,6 +47,8 @@ const useStudentStore = create((set) => ({
       });
     }
   },
+  
+  
   submitFeedback: async (comment) => {
     try {
       set({ loading: true, error: null });

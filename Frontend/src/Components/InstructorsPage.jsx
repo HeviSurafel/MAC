@@ -1,33 +1,45 @@
 import React from 'react';
-import image from "../assets/image01.jpg";
+import eshetu from "../assets/eshetu.png";
+import miki from "../assets/miki.jpg";
+import ake from "../assets/image01.jpg";
+import eyerusalem from "../assets/image01.jpg";
+import minte from "../assets/minte.png";
+
 const instructors = [
   {
-    name: 'Mikael',
-    title: 'Web development Instructor',
-    image: image,
+    name: 'Eshetu',
+    title: 'App Development Instructor',
+    image: eshetu,
     description:
-      'Mikael is an expert in advanced mathematics with over 10 years of teaching experience in both high school and college-level courses.',
+      'Eshetu specializes in mobile and desktop application development, bringing years of experience in the industry.',
   },
   {
     name: 'Mikael',
-    title: 'Web development Instructor',
-    image: image,
+    title: 'Web Development Instructor',
+    image: miki,
     description:
-      'Mikael is an expert in advanced mathematics with over 10 years of teaching experience in both high school and college-level courses.',
+      'Mikael is an expert in web technologies, teaching students how to build modern, responsive websites.',
   },
   {
-    name: 'Mikael',
-    title: 'Web development Instructor',
-    image: image,
+    name: 'Ake',
+    title: 'Graphics Design Instructor',
+    image: ake,
     description:
-      'Mikael is an expert in advanced mathematics with over 10 years of teaching experience in both high school and college-level courses.',
+      'Ake is a professional graphic designer with expertise in branding, UI/UX, and creative software tools.',
   },
   {
-    name: 'Mikael',
-    title: 'Web development Instructor',
-    image: image,
+    name: 'Eyerusalem',
+    title: 'Video Editing Instructor',
+    image: eyerusalem,
     description:
-      'Mikael is an expert in advanced mathematics with over 10 years of teaching experience in both high school and college-level courses.',
+      'Eyerusalem is a skilled video editor, helping students master professional editing techniques and storytelling.',
+  },
+  {
+    name: 'Minte',
+    title: 'Basic Computer Skills Instructor',
+    image: minte,
+    description:
+      'Minte teaches fundamental computer skills, ensuring students become proficient in essential digital literacy.',
   },
 ];
 
@@ -49,7 +61,7 @@ const InstructorsPage = () => {
                 alt={instructor.name}
                 className="w-32 h-32 mx-auto rounded-full border-4 border-blue-600 mb-6"
               />
-              <h3 className="text-2xl font-semibold text-blue-600 mb-2">{instructor.name}</h3>
+              <h3 className="text-2xl font-semibold text-blue-600 mb-2 capitalize">{instructor.name}</h3>
               <p className="text-lg text-gray-700 mb-4">{instructor.title}</p>
               <p className="text-gray-600">{instructor.description}</p>
             </div>

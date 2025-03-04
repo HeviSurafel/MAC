@@ -17,27 +17,26 @@ const generateCourseCode = () => {
 
 const CourseManagement = () => {
   const { user } = useUserStore();
-  const { deleteCourse, updateCourse, courses, getCourses, createCourse, setCourses } = useAdminStore();
+  const { deleteCourse, updateCourse, courses, getCourses, createCourse } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCourse, setEditingCourse] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [newCourse, setNewCourse] = useState({
-    courseName: "",
-    description: "",
-    instructors: [],
-    courseCode: generateCourseCode(),
-    cost: 0,
-    paymentType: "monthly",
-    registrationFee: 0,
-    durationInMonths: 3,
-    startDate: "",
-    endDate: "",
-  });
-
   useEffect(() => {
     getCourses();
-  }, []);
+ 
+  }, [getCourses]);
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCourse(null); // Reset editingCourse when modal closes
+  };
+
+  const openEditModal = (course) => {
+    setEditingCourse(course);
+    setIsModalOpen(true);
+  };
+
   const filteredCourses = (courses || []).filter(
     (course) =>
       course?.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -49,86 +48,22 @@ const CourseManagement = () => {
       await deleteCourse(id);
     } catch (error) {
       console.error("Error deleting course:", error);
+      alert("Failed to delete the course. Please try again.");
     }
   };
 
-  const openAddModal = () => {
-    setEditingCourse(null);
-    setNewCourse({
-      courseName: "",
-      description: "",
-      instructors: [],
-      courseCode: generateCourseCode(),
-      cost: 0,
-      paymentType: "monthly",
-      registrationFee: 0,
-      durationInMonths: 3,
-      startDate: "",
-      endDate: "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (course) => {
-    setEditingCourse(course);
-    setNewCourse({
-      courseName: course.courseName || "",
-      description: course.description || "",
-      instructors: course.instructors || [],
-      courseCode: course.courseCode || generateCourseCode(),
-      cost: course.cost || 0,
-      paymentType: course.paymentType || "monthly",
-      registrationFee: course.registrationFee || 0,
-      durationInMonths: course.durationInMonths || 3,
-      startDate: course.startDate || "",
-      endDate: course.endDate || "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingCourse(null);
-    setNewCourse({
-      courseName: "",
-      description: "",
-      instructors: [],
-      courseCode: "",
-      cost: 0,
-      paymentType: "monthly",
-      registrationFee: 0,
-      durationInMonths: 3,
-      startDate: "",
-      endDate: "",
-    });
-  };
-
-  const saveCourse = async () => {
-    const courseToSave = editingCourse ? { ...editingCourse, ...newCourse } : newCourse;
-    if (!courseToSave._id) delete courseToSave._id;
-
+  const handleSaveCourse = async (courseData) => {
     try {
       if (editingCourse) {
-        const updatedCourse = await updateCourse(courseToSave._id, courseToSave);
-        // Update the course in the state
-        setCourses((prevCourses) =>
-          prevCourses.map((course) =>
-            course._id === updatedCourse._id ? updatedCourse : course
-          )
-        );
+        await updateCourse(editingCourse._id, courseData);
       } else {
-        const createdCourse = await createCourse(courseToSave);
-        // Add the new course to the state
-        setCourses((prevCourses) => [...prevCourses, createdCourse]);
+        await createCourse(courseData);
       }
-      closeModal();
+      handleCloseModal();
     } catch (error) {
       console.error("Error saving course:", error);
+      alert("Failed to save the course. Please try again.");
     }
-  };
-
-  const handleCourseChange = (field, value) => {
-    setNewCourse((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -144,11 +79,11 @@ const CourseManagement = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 w-64 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <FaSearch className="absolute left-3 top-3 text-gray-400" />
+            <FaSearch className="absolute left-3 top-3 text-gray-400" aria-label="Search" />
           </div>
           {user?.role === "admin" && (
             <button
-              onClick={openAddModal}
+              onClick={() => setIsModalOpen(true)}
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 flex items-center"
             >
               <FaPlus className="mr-2" /> Add Course
@@ -162,20 +97,21 @@ const CourseManagement = () => {
           <CourseCard
             key={course._id}
             course={course}
-            openEditModal={openEditModal}
+            openEditModal={() => openEditModal(course)}
             deleteCourse={() => handleDeleteCourse(course._id)}
           />
         ))}
       </div>
 
-      <CourseModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        course={editingCourse || newCourse}
-        onSave={saveCourse}
-        onChange={handleCourseChange}
-        courseCode={(editingCourse || newCourse).courseCode}
-      />
+      {user?.role === "admin" && (
+        <CourseModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          course={editingCourse}
+          onSave={handleSaveCourse}
+          courseCode={editingCourse?.courseCode || generateCourseCode()}
+        />
+      )}
     </div>
   );
 };

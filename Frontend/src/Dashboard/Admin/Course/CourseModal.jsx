@@ -6,7 +6,7 @@ const CourseModal = ({
   onClose,
   course,
   onSave,
-  onChange,
+  onChange = () => {}, // ✅ Default function to prevent errors
   courseCode,
 }) => {
   const { instructors, getAllInstructors } = useAdminStore();
@@ -21,18 +21,19 @@ const CourseModal = ({
     durationInMonths: 3,
     startDate: "",
     endDate: "",
+    registrationFee: 0,
   });
 
   useEffect(() => {
     getAllInstructors();
-  }, []);
+  }, [getAllInstructors]);
 
   useEffect(() => {
     if (course) {
       setCourseData({
         ...course,
-        startDate: course.startDate ? course.startDate.split("T")[0] : "", // Convert to YYYY-MM-DD
-        endDate: course.endDate ? course.endDate.split("T")[0] : "", // Convert to YYYY-MM-DD
+        startDate: course.startDate ? course.startDate.split("T")[0] : "",
+        endDate: course.endDate ? course.endDate.split("T")[0] : "",
       });
     } else {
       setCourseData({
@@ -46,16 +47,21 @@ const CourseModal = ({
         durationInMonths: 3,
         startDate: "",
         endDate: "",
+        registrationFee: 0,
       });
     }
   }, [course, courseCode]);
 
   const handleInputChange = (field, value) => {
-    setCourseData({
-      ...courseData,
-      [field]: value,
+    setCourseData((prev) => {
+      const newData = { ...prev, [field]: value };
+      return newData;
     });
-    onChange(field, value);
+
+    // ✅ Prevent calling `onChange` if it's not passed
+    if (typeof onChange === "function") {
+      onChange(field, value);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -110,22 +116,43 @@ const CourseModal = ({
               Instructor
             </label>
             <select
+              multiple
               value={courseData.instructors || []}
               onChange={(e) => {
                 const selectedInstructors = Array.from(
                   e.target.selectedOptions,
                   (option) => option.value
                 );
+                console.log("Selected Instructors:", selectedInstructors);
                 handleInputChange("instructors", selectedInstructors);
               }}
               className="w-full p-3 border border-gray-300 rounded-lg"
             >
+              <option value="" disabled>
+                Select an Instructor
+              </option>
               {instructors?.map((inst) => (
                 <option key={inst._id} value={inst._id}>
                   {inst.firstName} {inst.lastName}
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Registration Fee */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Registration Fee
+            </label>
+            <input
+              type="number"
+              value={courseData.registrationFee}
+              onChange={(e) =>
+                handleInputChange("registrationFee", e.target.value)
+              }
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
           </div>
 
           {/* Payment Type */}
@@ -196,21 +223,6 @@ const CourseModal = ({
               className="w-full p-3 border border-gray-300 rounded-lg"
               required
             />
-          </div>
-
-          {/* Status */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={courseData.status}
-              onChange={(e) => handleInputChange("status", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
           </div>
 
           {/* Actions */}

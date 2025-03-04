@@ -6,6 +6,7 @@ const Feedback=require("../Model/Feedback.model")
 const path = require("path");
 const Certificate = require("../Model/Certeficate.model");
 const fs =require("fs");
+const asyncHandler = require("express-async-handler");
 const ERROR_MESSAGES = {
   COURSE_NOT_FOUND: "Course not found",
   MATERIALS_NOT_FOUND: "No materials found for this course",
@@ -17,7 +18,7 @@ const ERROR_MESSAGES = {
 };
 
 // Get all courses enrolled by the student
-const getStudentCourses = async (req, res) => {
+const getStudentCourses = asyncHandler(async (req, res) => {
   try {
     const studentId = req.user._id;
     const courses = await Course.find({ studentsEnrolled: studentId }).populate("instructors");
@@ -26,12 +27,11 @@ const getStudentCourses = async (req, res) => {
     console.error("Get Student Courses Error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
-};
+});
 
 
 
-const viewGrades = async (req, res) => {
-  console.log(req.user);
+const viewGrades = asyncHandler(async (req, res) => {
   try {
     const studentId = req.user._id; // Extract student ID from authenticated user
 
@@ -84,9 +84,9 @@ const viewGrades = async (req, res) => {
     console.error("Error fetching student grades:", error);
     return res.status(500).json({ message: "Server error. Please try again later." });
   }
-};
-// Generate certificate QR code
-const getcerteficate = async (req, res) => {
+});
+
+const getcerteficate =asyncHandler( async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -94,29 +94,36 @@ const getcerteficate = async (req, res) => {
       return res.status(400).json({ message: "Student ID is required." });
     }
 
-    // Check if certificate exists in the database
-    const certificate = await Certificate.findOne({ student: studentId });
+    // ✅ Find the most recent certificate for the student
+    const certificate = await Certificate.findOne({ student: studentId })
+      .populate("course", "courseName") // Get course name
+      .sort({ issuedAt: -1 });
+
     if (!certificate) {
       return res.status(404).json({ message: "No certificate found for this student." });
     }
 
-    // Path to the certificate file
-    const certificatePath = path.join(__dirname, "../certificates", `${studentId}.pdf`);
+    // ✅ Dynamically generate the file path
+    const sanitizedCourseName = certificate.course.courseName.replace(/\s+/g, "_");
+    const certificateFileName = `${studentId}_${sanitizedCourseName}.pdf`;
+    const certificatePath = path.join(__dirname, "../certificates", certificateFileName);
 
+    // ✅ Ensure the file exists before sending
     if (!fs.existsSync(certificatePath)) {
       return res.status(404).json({ message: "Certificate file not found." });
     }
 
+    // ✅ Send the PDF file to the frontend
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${studentId}.pdf"`);
-    return res.sendFile(certificatePath);
+    res.setHeader("Content-Disposition", `inline; filename="${certificateFileName}"`);
+    return res.sendFile(path.resolve(certificatePath)); // Ensures absolute path
   } catch (error) {
     console.error("Certificate Retrieval Error:", error);
     res.status(500).json({ message: "Error retrieving certificate" });
   }
-};
-const submitFeedback = async (req, res) => {
-  console.log(req.body);
+});
+
+const submitFeedback =asyncHandler( async (req, res) => {
   try {
     const { comment } = req.body; // Only extract existing fields
     const student = req.user._id; // Get student ID from authentication
@@ -133,7 +140,7 @@ const submitFeedback = async (req, res) => {
     console.error("Error submitting feedback:", error);
     res.status(500).json({ message: "Internal server error." });
   }
-};
+});
 
 module.exports = {
   getStudentCourses,

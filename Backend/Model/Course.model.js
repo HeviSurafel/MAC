@@ -24,7 +24,7 @@ const courseSchema = mongoose.Schema(
         default: null,
       },
     ],
-    durationInMonths: { type: Number, required: true },
+    durationInMonths: { type: Number, default: 3 },
     cost: { type: Number, required: true },
     registrationFee: { type: Number, default: 500 },
     startDate: {
