@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import useAdminStore from "../../../Store/AdminStore";
-
+const generateCourseCode = () => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 4; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    code += characters[randomIndex];
+  }
+  return code;
+};
 const CourseModal = ({
   isOpen,
   onClose,
   course,
   onSave,
-  onChange = () => {}, // ✅ Default function to prevent errors
+  courses,
+  onChange = () => {},
   courseCode,
 }) => {
   const { instructors, getAllInstructors } = useAdminStore();
@@ -15,62 +25,141 @@ const CourseModal = ({
     description: "",
     instructors: [],
     status: "Active",
-    courseCode: "",
+    courseCode: courseCode || "",
     paymentType: "one-time",
     cost: "",
+    batches: [],
+    selectedBatch: "",
     durationInMonths: 3,
     startDate: "",
     endDate: "",
     registrationFee: 0,
   });
 
+  const [courseTitles, setCourseTitles] = useState([]);
+  const [showNewCourseInput, setShowNewCourseInput] = useState(false);
+  const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [newBatchName, setNewBatchName] = useState("");
+
+  // Fetch all instructors on component mount
   useEffect(() => {
     getAllInstructors();
   }, [getAllInstructors]);
 
+  // Update course data when `course` or `courseCode` props change
   useEffect(() => {
     if (course) {
       setCourseData({
         ...course,
+        batches: course.batches || [],
+        selectedBatch: course.batches.length > 0 ? course.batches[0]._id : "",
         startDate: course.startDate ? course.startDate.split("T")[0] : "",
         endDate: course.endDate ? course.endDate.split("T")[0] : "",
       });
     } else {
-      setCourseData({
-        courseName: "",
-        description: "",
-        instructors: [],
-        status: "Active",
+      setCourseData((prev) => ({
+        ...prev,
         courseCode: courseCode || "",
-        paymentType: "one-time",
-        cost: "",
-        durationInMonths: 3,
-        startDate: "",
-        endDate: "",
-        registrationFee: 0,
-      });
+      }));
     }
   }, [course, courseCode]);
 
-  const handleInputChange = (field, value) => {
-    setCourseData((prev) => {
-      const newData = { ...prev, [field]: value };
-      return newData;
-    });
+  // Update course titles when `courses` prop changes
+  useEffect(() => {
+    if (courses && courses.length > 0) {
+      setCourseTitles(courses.map((c) => c.courseName));
+    }
+  }, [courses]);
 
-    // ✅ Prevent calling `onChange` if it's not passed
-    if (typeof onChange === "function") {
-      onChange(field, value);
+  // Handle input changes
+  const handleInputChange = (field, value) => {
+    setCourseData((prev) => ({ ...prev, [field]: value }));
+    onChange(field, value);
+  };
+
+  // Handle batch selection from dropdown
+  const handleBatchSelection = (e) => {
+    const selectedBatchId = e.target.value;
+    setCourseData((prev) => ({
+      ...prev,
+      selectedBatch: selectedBatchId,
+    }));
+  };
+
+  // Add a new batch
+  const addBatch = () => {
+    if (newBatchName.trim()) {
+      const newBatch = {
+        name: newBatchName,
+        _id: Date.now().toString(),
+      };
+      setCourseData((prev) => ({
+        ...prev,
+        batches: [...prev.batches, newBatch],
+        selectedBatch: newBatch._id,
+      }));
+      setNewBatchName("");
     }
   };
 
+  // Handle course title selection
+  const handleCourseTitleChange = (e) => {
+    const selectedValue = e.target.value;
+
+    if (selectedValue === "other") {
+      setShowNewCourseInput(true);
+      setCourseData((prev) => ({
+        ...prev,
+        courseName: "",
+        description: "",
+        instructors: [],
+        batches: [],
+        selectedBatch: "",
+        courseCode: generateCourseCode(), // Generate a new courseCode for new courses
+      }));
+    } else {
+      setShowNewCourseInput(false);
+      const selectedCourse = courses.find((c) => c.courseName === selectedValue);
+      if (selectedCourse) {
+        setCourseData((prev) => ({
+          ...prev,
+          ...selectedCourse,
+          courseCode: selectedCourse.courseCode, // Preserve the existing courseCode
+          startDate: selectedCourse.startDate ? selectedCourse.startDate.split("T")[0] : "",
+          endDate: selectedCourse.endDate ? selectedCourse.endDate.split("T")[0] : "",
+          batches: selectedCourse.batches || [],
+          selectedBatch: selectedCourse.batches.length > 0 ? selectedCourse.batches[0]._id : "",
+        }));
+      }
+    }
+  };
+
+  // Add a new course title
+  const addNewCourseTitle = () => {
+    if (newCourseTitle.trim()) {
+      setCourseTitles((prev) => [...prev, newCourseTitle]);
+      setCourseData((prev) => ({
+        ...prev,
+        courseName: newCourseTitle,
+      }));
+      setNewCourseTitle("");
+      setShowNewCourseInput(false);
+    }
+  };
+
+  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("Cost before submission:", courseData.cost); // Log the cost before submission
     if (!courseData.startDate || !courseData.endDate) {
       alert("Please select a start and end date.");
       return;
     }
-    onSave(courseData);
+    if (new Date(courseData.endDate) < new Date(courseData.startDate)) {
+      alert("End date must be after start date.");
+      return;
+    }
+    onSave(courseData); // Pass the courseData to the parent component or backend
   };
 
   if (!isOpen) return null;
@@ -82,21 +171,54 @@ const CourseModal = ({
           {course ? "Edit Course" : "Add Course"}
         </h2>
         <form onSubmit={handleSubmit}>
-          {/* Title */}
+          {/* Course Title */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title
+              Course Title
             </label>
-            <input
-              type="text"
+            <select
               value={courseData.courseName}
-              onChange={(e) => handleInputChange("courseName", e.target.value)}
+              onChange={handleCourseTitleChange}
               className="w-full p-3 border border-gray-300 rounded-lg"
               required
-            />
+            >
+              <option value="">Select a course</option>
+              {courseTitles.map((title, index) => (
+                <option key={index} value={title}>
+                  {title}
+                </option>
+              ))}
+              <option value="other">Other (Add New Course)</option>
+            </select>
           </div>
 
-          {/* Description */}
+          {/* New Course Title Input */}
+          {showNewCourseInput && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Course Title
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter new course title"
+                  value={newCourseTitle}
+                  onChange={(e) => setNewCourseTitle(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={addNewCourseTitle}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Course Description */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Description
@@ -110,27 +232,20 @@ const CourseModal = ({
             />
           </div>
 
-          {/* Instructor */}
+          {/* Instructors Dropdown */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Instructor
+              Instructor(s)
             </label>
             <select
-              multiple
-              value={courseData.instructors || []}
+              value={courseData.instructors[0] || ""}
               onChange={(e) => {
-                const selectedInstructors = Array.from(
-                  e.target.selectedOptions,
-                  (option) => option.value
-                );
-                console.log("Selected Instructors:", selectedInstructors);
-                handleInputChange("instructors", selectedInstructors);
+                const value = e.target.value === "" ? [] : [e.target.value];
+                handleInputChange("instructors", value);
               }}
               className="w-full p-3 border border-gray-300 rounded-lg"
             >
-              <option value="" disabled>
-                Select an Instructor
-              </option>
+              <option value="">Not Assigned</option>
               {instructors?.map((inst) => (
                 <option key={inst._id} value={inst._id}>
                   {inst.firstName} {inst.lastName}
@@ -147,9 +262,7 @@ const CourseModal = ({
             <input
               type="number"
               value={courseData.registrationFee}
-              onChange={(e) =>
-                handleInputChange("registrationFee", e.target.value)
-              }
+              onChange={(e) => handleInputChange("registrationFee", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg"
               required
             />
@@ -165,7 +278,7 @@ const CourseModal = ({
               onChange={(e) => handleInputChange("paymentType", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg"
             >
-              <option value="one-time">One-time Payment</option>
+              <option value="one-time">One-Time Payment</option>
               <option value="monthly">Monthly Subscription</option>
             </select>
           </div>
@@ -191,10 +304,54 @@ const CourseModal = ({
             </label>
             <input
               type="text"
-              value={courseData.courseCode || courseCode}
+              value={courseData.courseCode}
               onChange={(e) => handleInputChange("courseCode", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg"
+              required
             />
+          </div>
+
+          {/* Batches Dropdown */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Batches
+            </label>
+            <select
+              value={courseData.selectedBatch}
+              onChange={handleBatchSelection}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            >
+              <option value="">Select a batch</option>
+              {courseData.batches.map((batch) => (
+                <option key={batch._id} value={batch._id}>
+                  {batch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Add New Batch */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Add New Batch
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter new batch name"
+                value={newBatchName}
+                onChange={(e) => setNewBatchName(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={addBatch}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+              >
+                Add
+              </button>
+            </div>
           </div>
 
           {/* Start Date */}
@@ -230,7 +387,7 @@ const CourseModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg"
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition duration-200"
             >
               Cancel
             </button>
@@ -245,6 +402,16 @@ const CourseModal = ({
       </div>
     </div>
   );
+};
+
+CourseModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  course: PropTypes.object,
+  onSave: PropTypes.func.isRequired,
+  courses: PropTypes.array.isRequired,
+  onChange: PropTypes.func,
+  courseCode: PropTypes.string,
 };
 
 export default CourseModal;

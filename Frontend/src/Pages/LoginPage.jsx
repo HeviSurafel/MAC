@@ -18,7 +18,6 @@ const LoginPage = () => {
     e.preventDefault();
     login(email, password );
   };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-50 to-green-50">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-2xl w-96">

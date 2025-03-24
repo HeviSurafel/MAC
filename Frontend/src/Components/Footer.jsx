@@ -5,16 +5,14 @@ import logo from '../assets/Makalla Code Acadamey-01.jpg';
 const Footer = () => {
   return (
     <div className="w-full bg-gradient-to-r from-blue-600 to-teal-500  py-10 px-6 md:px-10 mt-auto">
-      <div className="max-w-[1480px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-[1480px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Logo and Contact Section */}
         <div>
           <img src={logo} className="h-[40px]" alt="Logo" />
           <h3 className="text-2xl font-bold mt-4 text-white">Contact Us</h3>
-          <p className="text-gray-200 text-base mt-2">Call: +251964945647</p>
-          <p className="text-gray-200 text-base mt-2">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit.
-          </p>
-          <p className="text-gray-200 text-base mt-2">Email: surafelwondu5647@mail.com</p>
+          <p className="text-gray-200 text-base mt-2">Call: +251 934 333 999</p>
+          <p className="text-gray-200 text-base mt-2">+251 934 333 111</p>
+          <p className="text-gray-200 text-base mt-2 ">Email:makallatechnologysolutions@gmail.com</p>
           <div className="flex gap-3 py-3">
             {[FaFacebookF, FaDribbble, FaLinkedinIn, FaInstagram, FaBehance].map((Icon, index) => (
               <div

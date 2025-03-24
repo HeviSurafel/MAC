@@ -9,15 +9,13 @@ const FeedbackList = () => {
   }, []);
 
   const markAsRead = (id) => {
-    // setFeedbacks(feedbacks.map((f) => (f.id === id ? { ...f, read: true } : f)));
     toast.success("Marked as read");
   };
 
   const handledeleteFeedback = (id) => {
     deleteFeedback(id);
-    toast.error("Feedback deleted");
+
   };
-  console.log(feedbacks)
 
   return (
     <div className="p-6 max-w-3xl mx-auto">

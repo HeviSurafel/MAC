@@ -66,18 +66,37 @@ const signup =asyncHandler(async (req, res) => {
 // Login
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
   try {
+    // Find the user by email
     const user = await User.findOne({ email });
+
+    // Check if the user exists
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    // Check if the user's account is suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended. Contact the admin.' });
+    }
+
+    // Compare the entered password with the stored one
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Generate tokens (access and refresh)
     const { accessToken, refreshToken } = await generateToken(user._id);
+
+    // Store tokens in cookies
     storeCookies(res, accessToken, refreshToken);
+
+    // Store the refresh token in the database
     await storeRefreshToken(user._id, refreshToken);
+
+    // Respond with user data and success message
     res.status(200).json({
       id: user._id,
       name: user.firstName,
@@ -94,6 +113,7 @@ const login = asyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Something went wrong' });
   }
 });
+
 
 // Logout
 const logout =asyncHandler( async (req, res) => {

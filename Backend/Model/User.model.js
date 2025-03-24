@@ -4,7 +4,6 @@ const bcrypt = require('bcrypt');
 const userSchema = mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
-  
   email: {
     type: String,
     required: true,
@@ -21,7 +20,7 @@ const userSchema = mongoose.Schema({
 
   role: { type: String, enum: ['admin', 'instructor', 'student'], required: true, default: "student" },
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
-
+  batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch' , default: null },
   dateOfBirth: {
     type: Date,
     required: true,

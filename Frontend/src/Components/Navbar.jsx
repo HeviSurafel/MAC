@@ -42,6 +42,7 @@ const Navbar = () => {
             </Link>
           </div>
 
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden text-white focus:outline-none"
@@ -49,6 +50,7 @@ const Navbar = () => {
             {menuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
           </button>
 
+          {/* Mobile Menu */}
           <div
             className={`${
               menuOpen
@@ -68,8 +70,50 @@ const Navbar = () => {
                 {item}
               </Link>
             ))}
+
+            {/* Mobile User Actions */}
+            <div className="md:hidden mt-4">
+              {user ? (
+                <div className="flex flex-col items-center space-y-4">
+                  <span className="text-white text-sm font-medium">
+                    Welcome, {user?.name}!
+                  </span>
+                  <Link
+                    to="/dashboard"
+                    className="text-white p-2 rounded-lg font-semibold hover:bg-green-500 hover:shadow-md transition duration-200"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="text-white p-2 rounded-lg font-semibold hover:bg-green-500 hover:shadow-md transition duration-200"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center space-y-4">
+                  <Link
+                    to="/login"
+                    className="text-white p-2 rounded-lg font-semibold hover:bg-green-500 hover:shadow-md transition duration-200"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="text-white p-2 rounded-lg font-semibold hover:bg-green-500 hover:shadow-md transition duration-200"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Desktop User Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <div className="relative dropdown">

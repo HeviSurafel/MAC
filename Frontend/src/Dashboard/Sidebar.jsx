@@ -1,6 +1,6 @@
 import React,{useState} from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FaHome, FaUsers, FaBook, FaCog, FaSignOutAlt } from "react-icons/fa";
+import { FaHome, FaUsers, FaBook,FaBlog,FaMoneyBill, FaEnvelope,FaCog, FaSignOutAlt } from "react-icons/fa";
 import useAuthStore from "../Store/useAuthStore"; // Import authentication store
 
 const Sidebar = () => {
@@ -10,12 +10,30 @@ const Sidebar = () => {
   // Sidebar links
   const links = [
     { path: "/dashboard", icon: <FaHome />, label: "Dashboard" },
- 
-    { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile" },
-    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses" },
-    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments" },
-    { path: "/dashboard/settings", icon: <FaCog />, label: "Settings" },
   ];
+  if(user?.role === "admin"){
+    links.push({ path: "/dashboard/users",icon: <FaUsers />, label: "Users"});
+  }
+  links.push(  { path: "/dashboard/profile", icon: <FaUsers />, label: "Profile" },
+    { path: "/dashboard/courses", icon: <FaBook />, label: "Courses" },
+    { path: "/dashboard/assessments", icon: <FaBook />, label: "Assessments" },)
+    if(user?.role === "admin"){
+      links.push({
+        path: "/dashboard/contactUs",
+        icon: <FaEnvelope />,
+        label: "ContactUs",
+      });
+      links.push({
+        path: "/dashboard/payement",
+        icon: <FaMoneyBill />,
+        label: "Payment",
+      });
+      links.push({
+        path: "/dashboard/blog",
+        icon: <FaBlog />,
+        label: "Blog",
+      });
+    }
 
   // Add Feedback and contact us message only if the user is a student
   if (user?.role === "student" || user?.role === "admin") {
@@ -25,19 +43,10 @@ const Sidebar = () => {
       label: "Feedback",
     }); 
   }
-  if(user?.role === "admin"){
-    links.push({ path: "/dashboard/users",icon: <FaUsers />, label: "Users"});
-    links.push({
-      path: "/dashboard/contactUs",
-      icon: <FaBook />,
-      label: "ContactUs",
-    });
-    links.push({
-      path: "/dashboard/payement",
-      icon: <FaBook />,
-      label: "Payment",
-    });
-  }
+
+  links.push({
+     path: "/dashboard/settings", icon: <FaCog />, label: "Settings" ,
+  })
   const handleLogout = (e) => {
     e.preventDefault();
     logout();

@@ -5,7 +5,6 @@ import { useUserStore } from "../../Store/useAuthStore";
 
 function ProfileSection({ onEdit }) {
   const { user } = useUserStore();
-  console.log(user);
   return (
     <div className="flex items-center justify-between mb-6 p-4 border border-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="flex items-center space-x-4">

@@ -10,23 +10,44 @@ export default function PaymentPage() {
     fetchUnpaidStudents,
     getCourses,
     makePayment,
+    resetUnpaidStudents,
   } = useAdminStore();
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [selectedBatchId, setSelectedBatchId] = useState(""); // State for selected batch
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(0);
   const [selectedMonths, setSelectedMonths] = useState([]);
+  const [batches, setBatches] = useState([]); // State for batches
 
   useEffect(() => {
     getCourses();
-  }, []);
 
+    // Cleanup function to reset state when the component unmounts
+    return () => {
+      resetUnpaidStudents();
+    };
+  }, [getCourses, resetUnpaidStudents]);
+
+  // Fetch batches when a course is selected
   useEffect(() => {
     if (selectedCourseId) {
-      fetchUnpaidStudents(selectedCourseId);
+      const selectedCourse = courses.find((course) => course._id === selectedCourseId);
+      if (selectedCourse) {
+        setBatches(selectedCourse.batches || []); // Set batches for the selected course
+      }
+    } else {
+      setBatches([]); // Clear batches if no course is selected
     }
-  }, [selectedCourseId]);
+  }, [selectedCourseId, courses]);
+
+  // Fetch unpaid students when a course or batch is selected
+  useEffect(() => {
+    if (selectedCourseId && selectedBatchId) {
+      fetchUnpaidStudents(selectedCourseId, selectedBatchId,batches); // Pass batch ID to fetchUnpaidStudents
+    }
+  }, [selectedCourseId, selectedBatchId, fetchUnpaidStudents]);
 
   const handlePayNow = (student) => {
     setSelectedStudent(student);
@@ -34,19 +55,31 @@ export default function PaymentPage() {
   };
 
   const handlePayment = async () => {
-    if (!selectedStudent || !selectedCourseId || selectedMonths.length === 0) {
-      toast.error("Please select months and enter an amount.");
+    if (!selectedStudent || !selectedCourseId) {
+      toast.error("Please select a student and course.");
       return;
     }
+
+    if (selectedMonths.length === 0) {
+      toast.error("Please select at least one month.");
+      return;
+    }
+
+    const totalAmount = unpaidStudents.find(
+      (student) => student.student._id === selectedStudent.student._id
+    )?.monthlyPayment;
+    setAmount(totalAmount);
 
     await makePayment(
       selectedStudent.student._id,
       selectedStudent.courseId,
-      parseFloat(amount),
-      selectedMonths
+      totalAmount,
+      selectedMonths,selectedBatchId
     );
 
     setIsModalOpen(false);
+    setSelectedMonths([]);
+    fetchUnpaidStudents(selectedCourseId, selectedBatchId); // Refresh the unpaid students list
   };
 
   return (
@@ -55,11 +88,16 @@ export default function PaymentPage() {
 
       {/* Course Selection Dropdown */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <label className="block mb-2 font-semibold text-gray-700">Select a Course:</label>
+        <label className="block mb-2 font-semibold text-gray-700">
+          Select a Course:
+        </label>
         <select
           className="border p-2 mb-4 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
           value={selectedCourseId}
-          onChange={(e) => setSelectedCourseId(e.target.value)}
+          onChange={(e) => {
+            setSelectedCourseId(e.target.value);
+            setSelectedBatchId(""); // Reset batch selection when course changes
+          }}
         >
           <option value="">-- Select a Course --</option>
           {courses.map((course) => (
@@ -68,6 +106,27 @@ export default function PaymentPage() {
             </option>
           ))}
         </select>
+
+        {/* Batch Selection Dropdown */}
+        {selectedCourseId && (
+          <div className="mt-4">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Select a Batch:
+            </label>
+            <select
+              className="border p-2 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+              value={selectedBatchId}
+              onChange={(e) => setSelectedBatchId(e.target.value)}
+            >
+              <option value="">-- Select a Batch --</option>
+              {batches.map((batch) => (
+                <option key={batch._id} value={batch._id}>
+                  {batch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Unpaid Students Table */}
@@ -79,6 +138,10 @@ export default function PaymentPage() {
                 <th className="p-3 text-left">Name</th>
                 <th className="p-3 text-left">Email</th>
                 <th className="p-3 text-left">Paid Months</th>
+                <th className="p-3 text-left">Monthly Payment</th>
+                <th className="p-3 text-left">Discount Type</th>
+                <th className="p-3 text-left">Registration Fee</th>
+                <th className="p-3 text-left">Total Paid</th>
                 <th className="p-3 text-left">Unpaid Months</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
@@ -86,33 +149,60 @@ export default function PaymentPage() {
             <tbody>
               {unpaidStudents?.length > 0 ? (
                 unpaidStudents.map((student, index) => {
-                  const paymentDetails = studentPayments[student.student._id]; // Get payment details for the student
+                  const paymentDetails = studentPayments[student.student._id];
+                  const isPaymentComplete = student.unpaidMonths.length === 0;
+
                   return (
-                    <tr key={index} className="border-b hover:bg-gray-50 transition duration-200">
+                    <tr
+                      key={index}
+                      className="border-b hover:bg-gray-50 transition duration-200"
+                    >
                       <td className="p-3 text-gray-700">
                         {student.student?.firstName} {student.student?.lastName}
                       </td>
-                      <td className="p-3 text-gray-700">{student.student?.email}</td>
+                      <td className="p-3 text-gray-700">
+                        {student.student?.email}
+                      </td>
                       <td className="p-3 text-gray-700">
                         {paymentDetails?.paidMonths?.join(", ") || "N/A"}
                       </td>
                       <td className="p-3 text-gray-700">
-                        {paymentDetails?.unpaidMonths?.join(", ") || "N/A"}
+                        {student?.monthlyPayment}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {student.discountType}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {student.registrationFee}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {student.totalAmountPaid}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {isPaymentComplete
+                          ? "No unpaid months"
+                          : student.unpaidMonths.join(", ")}
                       </td>
                       <td className="p-3">
-                        <button
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-                          onClick={() => handlePayNow(student)}
-                        >
-                          Pay Now
-                        </button>
+                        {isPaymentComplete ? (
+                          <span className="text-green-600 font-semibold">
+                            Payment Complete
+                          </span>
+                        ) : (
+                          <button
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+                            onClick={() => handlePayNow(student)}
+                          >
+                            Pay Now
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center p-4 text-gray-600">
+                  <td colSpan="9" className="text-center p-4 text-gray-600">
                     No unpaid students found
                   </td>
                 </tr>
@@ -126,10 +216,13 @@ export default function PaymentPage() {
       {isModalOpen && selectedStudent && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Process Payment</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-800">
+              Process Payment
+            </h2>
             <div className="mb-4 p-3 bg-gray-100 rounded-lg">
               <p className="font-semibold text-gray-700">
-                {selectedStudent.student?.firstName} {selectedStudent.student?.lastName}
+                {selectedStudent.student?.firstName}{" "}
+                {selectedStudent.student?.lastName}
               </p>
               <p className="text-gray-600">{selectedStudent.student?.email}</p>
               <p className="text-gray-600">{selectedStudent.courseName}</p>
@@ -137,7 +230,9 @@ export default function PaymentPage() {
 
             {/* Unpaid Months Selection */}
             <div className="mb-4">
-              <label className="block mb-2 font-semibold text-gray-700">Select Unpaid Months:</label>
+              <label className="block mb-2 font-semibold text-gray-700">
+                Select Unpaid Months:
+              </label>
               {selectedStudent.unpaidMonths?.map((month) => (
                 <div key={month} className="flex items-center mb-2">
                   <input
@@ -148,7 +243,9 @@ export default function PaymentPage() {
                       if (e.target.checked) {
                         setSelectedMonths([...selectedMonths, month]);
                       } else {
-                        setSelectedMonths(selectedMonths.filter((m) => m !== month));
+                        setSelectedMonths(
+                          selectedMonths.filter((m) => m !== month)
+                        );
                       }
                     }}
                     className="mr-2"
@@ -160,12 +257,14 @@ export default function PaymentPage() {
 
             {/* Amount Input */}
             <div className="mb-4">
-              <label className="block mb-2 font-semibold text-gray-700">Amount:</label>
+              <label className="block mb-2 font-semibold text-gray-700">
+                Amount:
+              </label>
               <input
                 type="number"
                 className="border p-2 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={selectedStudent?.monthlyPayment}
+                readOnly
               />
             </div>
 

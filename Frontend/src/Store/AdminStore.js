@@ -4,10 +4,12 @@ import { toast } from "react-hot-toast";
 
 const useAdminStore = create((set, get) => ({
   users: [],
+  detailUser: null,
   analytics: null,
   unpaidStudents: [],
   feedbacks: null,
   courses: [],
+  studentFiltered:[],
   instructors: [],
   user: null,
   loading: false,
@@ -36,6 +38,13 @@ const useAdminStore = create((set, get) => ({
       throw error;
     }
   },
+  // getAllUsers: () =>
+  //   get().handleRequest(
+  //     () => axios.get("/users"),
+  //     null,
+  //     "Failed to load users.",
+  //     (data) => set((state) => ({ ...state, users: data })) // Corrected state update
+  //   ),
 
   // Fetch all users
   getAllUsers: () =>
@@ -45,26 +54,29 @@ const useAdminStore = create((set, get) => ({
       "Failed to load users.",
       (data) => set({ users: data })
     ),
+  resetUnpaidStudents: () => {
+    set({ unpaidStudents: [] }); // Reset unpaidStudents to an empty array
+  },
 
+  fetchAnalytics: async () => {
+    if (get().analytics) return; // ✅ Prevent re-fetching if data exists
+    set({ loading: true });
+    try {
+      const { data } = await axios.get("/dashboard");
+      set({ analytics: data, loading: false });
+    } catch (err) {
+      set({ error: "Failed to fetch analytics", loading: false });
+    }
+  },
 
-     fetchAnalytics :async () => {
-      if (get().analytics) return; // ✅ Prevent re-fetching if data exists
-      set({ loading: true });
-      try {
-        const { data } = await axios.get("/dashboard");
-        set({ analytics: data, loading: false });
-      } catch (err) {
-        set({ error: "Failed to fetch analytics", loading: false });
-      }
-    },
-     
   // Create a new user
   createUser: (userData) =>
     get().handleRequest(
       () => axios.post("/users", userData),
       "User created successfully.",
       "Failed to create user.",
-      (data) => set({ users: [...get().users, data] }) // Update users list
+      (data) => set({ users: [...get().users, data] }), // Update users list
+      get().getAllUsers()
     ),
 
   // Delete a user
@@ -79,18 +91,48 @@ const useAdminStore = create((set, get) => ({
   },
 
   // Suspend a user
-  suspendUser: (userId) =>
-    get().handleRequest(
-      () => axios.put(`/users/suspend/${userId}`),
-      "User suspended successfully.",
-      "Failed to suspend user.",
-      () =>
-        set({
-          users: get().users.map((user) =>
-            user._id === userId ? { ...user, status: "suspended" } : user
-          ),
-        }) // Update user status
-    ),
+
+  suspendUser: (userId) => {
+    const isConfirmed = window.confirm(
+      "Are you sure you want to suspend this user?"
+    );
+    if (isConfirmed) {
+      get().handleRequest(
+        () => axios.put(`/users/suspend/${userId}`),
+        "User suspended successfully.",
+        "Failed to suspend user.",
+        () =>
+          set({
+            users: get().users.map((user) =>
+              user._id === userId ? { ...user, status: "Suspended" } : user
+            ),
+          }) // Update user status
+      );
+    } else {
+      console.log("User suspension canceled");
+    }
+  },
+
+  UnSuspendUser: (userId) => {
+    const isConfirmed = window.confirm(
+      "Are you sure you want to unsuspend this user?"
+    );
+    if (isConfirmed) {
+      get().handleRequest(
+        () => axios.put(`/users/unsuspend/${userId}`),
+        "User unsuspended successfully.",
+        "Failed to unsuspend user.",
+        () =>
+          set({
+            users: get().users.map((user) =>
+              user._id === userId ? { ...user, status: "Active" } : user
+            ),
+          }) // Update user status
+      );
+    } else {
+      console.log("User unsuspension canceled");
+    }
+  },
 
   // Fetch user by ID
   getUserById: (userId) =>
@@ -98,37 +140,48 @@ const useAdminStore = create((set, get) => ({
       () => axios.get(`/users/${userId}`),
       null,
       "Failed to fetch user details.",
-      (data) => set({ user: data }) // Set the selected user
+      (data) => set({ detailUser: data }) // Set the selected user
     ),
 
   // Fetch courses
-  getCourses: (courseId = "", section = "") =>
+  getCourses: (courseId = "", section = "",batch = "") =>
     get().handleRequest(
       () =>
         axios.get("/courses", {
-          params: { courseId, section },
+          params: { courseId, section,batch },
         }),
       null,
       "Failed to fetch courses.",
       (data) => set({ courses: data }) // Update courses list
     ),
-
+getFilteredStudent:async (courseId,section,batch)=>{
+  try {
+    const response = await axios.get(`/courses/${courseId}/sections/${section}/students/${batch}`, {
+    });
+    set({ studentFiltered: response.data });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching filtered students:", error);
+    throw error;
+  }
+},
   // Create a new course
   createCourse: async (courseData) => {
     try {
       const response = await axios.post("/courses", courseData);
       set((state) => ({ courses: [...state.courses, response.data] }));
+      get().getCourses();
       toast.success("Course created successfully!");
       return response.data;
     } catch (error) {
-      toast.error("Failed to create course.");
+      toast.error("Failed to create course.", error);
       console.error("Create Course Error:", error);
     }
   },
 
   updateCourse: async (id, courseData) => {
     if (!window.confirm("Are you sure you want to update this course?")) return;
-    
+
     try {
       const response = await axios.put(`/courses/${id}`, courseData);
       set({
@@ -136,16 +189,18 @@ const useAdminStore = create((set, get) => ({
           course._id === id ? response.data : course
         ),
       });
+
       toast.success("Course updated successfully!");
+      get().getCourses(); // Refresh unpaid students list
     } catch (error) {
       toast.error("Failed to update course.");
       console.error("Update Course Error:", error);
     }
   },
   // Fetch unpaid students for a course
-  fetchUnpaidStudents: (courseId) =>
+  fetchUnpaidStudents: (courseId,batches) =>
     get().handleRequest(
-      () => axios.get(`/student/unpaid/${courseId}`),
+      () => axios.get(`/student/unpaid/${courseId}/${batches}`),
       null,
       "Failed to fetch unpaid students.",
       (data) => {
@@ -161,15 +216,17 @@ const useAdminStore = create((set, get) => ({
       }
     ),
 
-
   // Make a payment for specific months
-  makePayment: async (studentId, courseId, amount, selectedMonths = []) => {
+  makePayment: async (studentId, courseId, amount, selectedMonths = [],selectedBatchId) => {
     try {
-      const response = await axios.post(`/student/pay/${studentId}/${courseId}`, {
-        amount,
-        paymentType: "monthly",
-        selectedMonths,
-      });
+      const response = await axios.post(
+        `/student/pay/${studentId}/${courseId}`,
+        {
+          amount,
+          paymentType: "monthly",
+          selectedMonths,
+        }
+      );
 
       if (response.status === 201) {
         toast.success("Payment marked successfully.");
@@ -184,7 +241,7 @@ const useAdminStore = create((set, get) => ({
         set({ studentPayments });
 
         // Refresh the unpaid students list
-        get().fetchUnpaidStudents(courseId);
+        get().fetchUnpaidStudents(courseId,selectedBatchId);
       } else {
         toast.error(response.data.message || "Payment failed.");
       }
@@ -201,7 +258,10 @@ const useAdminStore = create((set, get) => ({
       () => axios.delete(`/courses/${id}`),
       "Course deleted successfully.",
       "Failed to delete course.",
-      () => set({ courses: get().courses.filter((course) => course._id !== id) }) // Remove course from list
+      () =>
+        set({ courses: get().courses.filter((course) => course._id !== id) }),
+      get().getCourses()
+      // Remove course from list
     );
   },
 
@@ -211,7 +271,20 @@ const useAdminStore = create((set, get) => ({
       const response = await axios.get("/student/feedback");
       set({ feedbacks: response.data }); // Update feedbacks list
     } catch (error) {
-      toast.error("Failed to fetch feedback.",error);
+      toast.error("Failed to fetch feedback.", error);
+    }
+  },
+  //resetgrade and regenerate certeficate
+  resetGradeAndRegenerateCertificate: async (courseId, section, selectedBatch,validUpdates) => {
+    try {
+      if (!window.confirm("Are you sure you want to update the grades and regenerate certeficate?")) return;
+      const response = await axios.put(
+        `/student/updateGradeandRegenerateCerteficarte/${courseId}/${section}/${selectedBatch}`,
+        validUpdates
+      );
+      toast.success("Grades updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update grades.", error);
     }
   },
 
@@ -247,17 +320,26 @@ const useAdminStore = create((set, get) => ({
 
   // Delete an instructor
   deleteInstructor: (id) => {
-    if (!window.confirm("Are you sure you want to delete this instructor?")) return;
+    if (!window.confirm("Are you sure you want to delete this instructor?"))
+      return;
     get().handleRequest(
       () => axios.delete(`/instructors/${id}`),
       "Instructor deleted successfully.",
       "Failed to delete instructor.",
-      () => set({ instructors: get().instructors.filter((inst) => inst._id !== id) }) // Remove instructor from list
+      () =>
+        set({
+          instructors: get().instructors.filter((inst) => inst._id !== id),
+        }) // Remove instructor from list
     );
   },
   resetCertificatesAndCourseStatus: (courseId) => {
-    if (!window.confirm("Are you sure you want to reset certificates and mark the course as incompleted?")) return;
-  
+    if (
+      !window.confirm(
+        "Are you sure you want to reset certificates and mark the course as incompleted?"
+      )
+    )
+      return;
+
     get().handleRequest(
       () => axios.put(`/course/reset-certificates/${courseId}`),
       "Certificates removed and course status set to incompleted.",
@@ -266,12 +348,14 @@ const useAdminStore = create((set, get) => ({
         // Optional: Update local state if needed
         set((state) => ({
           courses: state.courses.map((course) =>
-            course._id === courseId ? { ...course, courseStatus: "incompleted" } : course
-          )
+            course._id === courseId
+              ? { ...course, courseStatus: "incompleted" }
+              : course
+          ),
         }));
       }
     );
-  },  
+  },
 }));
 
 export default useAdminStore;

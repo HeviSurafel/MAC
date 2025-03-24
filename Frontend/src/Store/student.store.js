@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "../lib/axios";
+import toast from "react-hot-toast";
 
 const useStudentStore = create((set) => ({
   studentandgrades: [],
@@ -54,6 +55,7 @@ const useStudentStore = create((set) => ({
       set({ loading: true, error: null });
       const response = await axios.post("/student/submit", { comment }); // Fix: Wrap in an object
       set({ loading: false });
+      toast.success("Feedback submitted successfully!");
       return response.data;
     } catch (error) {
       console.error("Error submitting feedback:", error);

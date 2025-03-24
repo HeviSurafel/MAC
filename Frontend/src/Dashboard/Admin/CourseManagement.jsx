@@ -14,7 +14,6 @@ const generateCourseCode = () => {
   }
   return code;
 };
-
 const CourseManagement = () => {
   const { user } = useUserStore();
   const { deleteCourse, updateCourse, courses, getCourses, createCourse } = useAdminStore();
@@ -24,7 +23,6 @@ const CourseManagement = () => {
 
   useEffect(() => {
     getCourses();
- 
   }, [getCourses]);
 
   const handleCloseModal = () => {
@@ -108,8 +106,9 @@ const CourseManagement = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           course={editingCourse}
+          courses={courses}
           onSave={handleSaveCourse}
-          courseCode={editingCourse?.courseCode || generateCourseCode()}
+          courseCode={editingCourse ? editingCourse.courseCode : generateCourseCode()} // Pass courseCode dynamically
         />
       )}
     </div>

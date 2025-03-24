@@ -7,7 +7,12 @@ const sectionSchema = mongoose.Schema(
       ref: "Course", 
       required: true 
     }, // Reference to Course
-
+    batch: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Batch", 
+      required: true 
+    }, // Reference to Batch
+    
     section: { 
       type: String, 
       enum: ["A", "B", "C", "D", "E", "F", "G"], 

@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } fro
 import useAdminStore from '../Store/AdminStore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import LoadingSpinner from "../Components/LoadingSpinner";
 
 const DashboardOverview = () => {
   // Fetch analytics from Zustand store
@@ -36,7 +37,7 @@ const DashboardOverview = () => {
 
 
 
-  if (loading) return <p className="text-center text-gray-600">Loading analytics...</p>;
+  if (loading) return <LoadingSpinner />;
   if (error) {
     return (
       <div className="text-center">

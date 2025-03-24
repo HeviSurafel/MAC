@@ -1,4 +1,3 @@
-// UserManagement.js
 import React, { useEffect, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import AdminStore from "../../Store/AdminStore";
@@ -9,9 +8,10 @@ import useUserStore from "../../Store/useAuthStore";
 
 const UserManagement = () => {
   const { user } = useUserStore();
-  const { users,courses, createUser, getAllUsers,getCourses, deleteUser } = AdminStore();
+  const { users, detailUser, courses, createUser, getAllUsers, getUserById, suspendUser, UnSuspendUser, getCourses, deleteUser } = AdminStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("all"); // State for role filter
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -21,40 +21,41 @@ const UserManagement = () => {
     dateOfBirth: "",
     address: "",
     phoneNumber: "",
-    emergencyContact: "",
-    course: "",
   });
 
   useEffect(() => {
-    getAllUsers(),
-    getCourses()
+    getAllUsers();
+    getCourses();
   }, []);
-   // Filter users based on the searchQuery
-   const filteredUsers = users.filter((user) =>
-    user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
+  // Filter users based on the searchQuery and selected role
+  const filteredUsers = users?.filter((user) => {
+    const matchesSearchQuery =
+      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const createUserNewUser = () => {
-    const newUser = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      role: formData.role,
-      status: "Active",
-      password: formData.password,
-      
-      section: formData.section,
-      dateOfBirth: formData.dateOfBirth,
-      address: formData.address,
-    
-      phoneNumber: formData.phoneNumber,
-    };
-    createUser([...users, newUser]);
-    setIsModalOpen(false);
+    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+
+    return matchesSearchQuery && matchesRole;
+  });
+
+  const handleSuspendUser = async (id) => {
+    try {
+      await suspendUser(id);
+    } catch (error) {
+      console.error("Error suspending user:", error);
+    }
   };
+
+  const handleUnSuspendUser = async (id) => {
+    try {
+      await UnSuspendUser(id);
+    } catch (error) {
+      console.error("Error unsuspending user:", error);
+    }
+  };
+
   const handleDeleteUser = async (id) => {
     try {
       await deleteUser(id);
@@ -62,34 +63,56 @@ const UserManagement = () => {
       console.error("Error deleting user:", error);
     }
   };
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">User Management</h1>
       <div className="flex justify-between items-center mb-6">
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        {user?.role==="admin" && (  <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600"
+        {user?.role === "admin" && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600"
+          >
+            <FaPlus className="inline mr-2" /> Add User
+          </button>
+        )}
+      </div>
+
+      {/* Role Filter Dropdown */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Role</label>
+        <select
+          value={selectedRole}
+          onChange={(e) => setSelectedRole(e.target.value)}
+          className="w-full p-3 border rounded-lg focus:ring-blue-500"
         >
-          <FaPlus className="inline mr-2" /> Add User
-        </button>)}
-      
+          <option value="all">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="student">Student</option>
+          <option value="instructor">Instructor</option>
+        </select>
       </div>
 
       {isModalOpen && (
         <UserModal
-          isModalOpen={isModalOpen} // Pass the isModalOpen prop
+          isModalOpen={isModalOpen}
           formData={formData}
           setFormData={setFormData}
           createUser={createUser}
           setIsModalOpen={setIsModalOpen}
-          createUserNewUser={createUserNewUser}
           courses={courses}
         />
       )}
 
-      <UserTable user={user} users={filteredUsers} handleDeleteUser={handleDeleteUser} />
+      <UserTable
+        user={user}
+        courses={courses}
+        users={filteredUsers}
+        handleUnSuspendUser={handleUnSuspendUser}
+        handleDeleteUser={handleDeleteUser}
+        handleSuspendUser={handleSuspendUser}
+        getUserById={getUserById} // Pass getUserById
+      />
     </div>
   );
 };

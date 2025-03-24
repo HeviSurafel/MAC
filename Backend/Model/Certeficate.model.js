@@ -5,6 +5,7 @@ const certificateSchema = mongoose.Schema({
   course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true }, // Reference to Course
   certificateId: { type: String, required: true, unique: true }, // Unique ID for certificate
   qrCode: { type: String, required: true },
+  status:{type:String, enum:["valid", "updated", "revoked"]},
   issuedAt: { type: Date, default: Date.now },
 });
 

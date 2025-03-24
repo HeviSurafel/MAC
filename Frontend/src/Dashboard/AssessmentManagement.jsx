@@ -13,15 +13,15 @@ const AssessmentManagement = () => {
   const {
     courses, // Array of instructor courses
     courseStudents,
-    getInstructorCoursesAndStudents,
     fetchCourseStudents,
     updateAllAssessments,
     markCourseAsCompleted,
     generateCertificates,
     fetchCourseStatus,
+    getInstructorCourses,
   } = useInstructorStore();
 
-  const { courses: adminCourses, getCourses,resetCertificatesAndCourseStatus } = useAdminStore();
+  const { courses: adminCourses,studentFiltered,getFilteredStudent, getCourses, resetCertificatesAndCourseStatus, resetGradeAndRegenerateCertificate } = useAdminStore();
   const {
     studentandgrades,
     fetchCoursesandGrades,
@@ -30,13 +30,15 @@ const AssessmentManagement = () => {
 
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState(""); // Add selectedBatch state
   const [editedAssessments, setEditedAssessments] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [courseStatus, setCourseStatus] = useState("");
 
   useEffect(() => {
     if (user?.role === "instructor") {
-      getInstructorCoursesAndStudents();
+      getInstructorCourses();
+      
     } else if (user?.role === "admin") {
       getCourses();
     } else if (user?.role === "student") {
@@ -58,7 +60,6 @@ const AssessmentManagement = () => {
       }
     }, [selectedCourse, selectedSection]);
   }
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {user?.role === "student" ? (
@@ -71,11 +72,16 @@ const AssessmentManagement = () => {
         <AdminView
           user={user}
           courses={adminCourses}
+          studentFiltered={studentFiltered}
+          getFilteredStudent={getFilteredStudent}
           getCourses={getCourses}
           selectedCourse={selectedCourse}
           setSelectedCourse={setSelectedCourse}
           selectedSection={selectedSection}
           setSelectedSection={setSelectedSection}
+          selectedBatch={selectedBatch} // Pass selectedBatch to AdminView
+          setSelectedBatch={setSelectedBatch} // Pass setSelectedBatch to AdminView
+          resetGradeAndRegenerateCertificate={resetGradeAndRegenerateCertificate}
           resetCertificatesAndCourseStatus={resetCertificatesAndCourseStatus}
         />
       ) : user?.role === "instructor" ? (
@@ -84,7 +90,9 @@ const AssessmentManagement = () => {
           courseStatus={courseStatus}
           courseStudents={courseStudents}
           courses={courses}
+          selectedBatch={selectedBatch}
           selectedCourse={selectedCourse}
+          setSelectedBatch={setSelectedBatch}
           setSelectedCourse={setSelectedCourse}
           selectedSection={selectedSection}
           setSelectedSection={setSelectedSection}

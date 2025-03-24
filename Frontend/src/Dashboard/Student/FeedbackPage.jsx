@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import useStudentStore from "../../Store/student.store";
+import { set } from "mongoose";
 const FeedbackPage = () => {
   const [comment, setComment] = useState("");
 
@@ -8,6 +9,7 @@ const FeedbackPage = () => {
   const handleFormSubmit = (e) => {
     e.preventDefault();
     submitFeedback(comment);
+    setComment("");
   };
 
   return (

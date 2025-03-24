@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 
 const generateCertificatePDF = async (studentId, studentName, courseName, certificateId, qrCodeData) => {
+
   return new Promise(async (resolve, reject) => {
     try {
       const certificatesDir = path.join(__dirname, "../certificates");
@@ -11,114 +12,104 @@ const generateCertificatePDF = async (studentId, studentName, courseName, certif
         fs.mkdirSync(certificatesDir, { recursive: true });
       }
 
-      const filePath = path.join(certificatesDir, `${studentId}_${courseName.replace(/ /g, "_")}.pdf`);
+      const sanitizedCourseName = courseName.replace(/\s+/g, "_");
+      const filePath = path.join(certificatesDir, `${studentId}_${sanitizedCourseName}.pdf`);
+
       const stream = fs.createWriteStream(filePath);
       const doc = new PDFDocument({ size: "A4", layout: "landscape" });
 
       doc.pipe(stream);
 
-      // Define styles based on course
-      let primaryColor, secondaryColor, titleFont, bodyFont, bgColor, borderType;
-      switch (courseName) {
-        case "Full Stack Web Development":
-          primaryColor = "#1E3A8A";
-          secondaryColor = "#64748B";
-          bgColor = "#E3F2FD"; // Light blue
-          titleFont = "Helvetica-Bold";
-          bodyFont = "Helvetica";
-          borderType = "solid";
-          break;
-        case "App Development":
-          primaryColor = "#0D9488";
-          secondaryColor = "#14B8A6";
-          bgColor = "#D1FAE5"; // Light green
-          titleFont = "Helvetica-Bold";
-          bodyFont = "Helvetica";
-          borderType = "dotted";
-          break;
-        case "Video Editing":
-          primaryColor = "#B91C1C";
-          secondaryColor = "#F43F5E";
-          bgColor = "#FEE2E2"; // Light red
-          titleFont = "Courier-Bold";
-          bodyFont = "Courier";
-          borderType = "dashed";
-          break;
-        case "Graphics Design":
-          primaryColor = "#8B5CF6";
-          secondaryColor = "#A78BFA";
-          bgColor = "#EDE9FE"; // Light purple
-          titleFont = "Times-Bold";
-          bodyFont = "Times-Roman";
-          borderType = "double";
-          break;
-        case "Basic Computer Skill":
-          primaryColor = "#2563EB";
-          secondaryColor = "#3B82F6";
-          bgColor = "#DBEAFE"; // Light blue
-          titleFont = "Helvetica-Bold";
-          bodyFont = "Helvetica";
-          borderType = "solid";
-          break;
-        default:
-          primaryColor = "#374151";
-          secondaryColor = "#6B7280";
-          bgColor = "#F9FAFB";
-          titleFont = "Helvetica-Bold";
-          bodyFont = "Helvetica";
-          borderType = "solid";
+      const primaryColor = "#1E3A8A"; // Dark blue
+      const secondaryColor = "#B91C1C"; // Red
+      const accentColor = "#FFD700"; // Gold
+      const titleFont = "Helvetica-Bold";
+      const bodyFont = "Helvetica";
+
+      doc.rect(0, 0, 842, 595).fill("#FFFFFF"); 
+      doc.fillColor(accentColor).rect(0, 0, 50, 595).fill(); 
+
+      doc.fontSize(38).font(titleFont).fillColor(primaryColor).text("CERTIFICATE", 250, 50);
+      doc.fontSize(24).font("Helvetica-Oblique").fillColor(secondaryColor).text("of completion", 250, 90);
+      doc.moveTo(100, 130).lineTo(742, 130).stroke(primaryColor);
+
+      doc.fontSize(20).font(bodyFont).fillColor("#000").text("This certificate is presented to", 0, 160, { align: "center", width: 842 });
+      doc.fontSize(30).font("Helvetica-Bold").fillColor(primaryColor).text(studentName.toUpperCase(), 0, 200, { align: "center", width: 842 });
+
+      doc.fontSize(16).font(bodyFont).fillColor("#000").text("For successfully completing the", 0, 250, { align: "center", width: 842 });
+      doc.fontSize(18).font("Helvetica-Bold").fillColor(secondaryColor).text(courseName, 0, 280, { align: "center", width: 842 });
+
+      let courseDescription = "";
+      if (courseName === "Graphics Design") {
+        courseDescription = "This course covered the fundamentals of design theory, typography, color theory, and practical skills in various design tools.";
+      } else if (courseName === "Full Stack Web Development") {
+        courseDescription = "This course included intensive training in front-end and back-end technologies, database management, and web development best practices.";
+      } else if (courseName === "App Development") {
+        courseDescription = "The course focused on mobile application development for both Android and iOS, utilizing modern frameworks and APIs.";
+      } else if (courseName === "Basic Computer Skills") {
+        courseDescription = "This course provided essential knowledge in basic computer operations, office software tools, internet usage, and troubleshooting techniques.";
+      } else if (courseName === "Video Editing") {
+        courseDescription = "This course focused on video production, editing techniques, and the use of professional editing software.";
+      } else {
+        courseDescription = "This course provided the necessary skills and knowledge for a specific field, focusing on practical, hands-on training.";
       }
 
-      // Background
-      doc.rect(0, 0, 842, 595).fill(bgColor);
-      doc.rect(20, 20, 802, 555).stroke(primaryColor, borderType === "double" ? 4 : 2);
-      if (borderType === "dotted") {
-        doc.dash(5, { space: 5 });
-      } else if (borderType === "dashed") {
-        doc.dash(10, { space: 5 });
+      doc.fontSize(14).font(bodyFont).fillColor("#555").text(courseDescription, 0, 320, { align: "center", width: 842 });
+
+      const currentDate = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      doc.fontSize(12).fillColor("#555").text(`Certificate ID: ${certificateId}`, 100, 420);
+      doc.fontSize(12).fillColor("#555").text(`Date: ${currentDate}`, 550, 420);
+
+      // General Manager's Name & Signature
+      doc.fontSize(14).fillColor("#000").text("General Manager: Miki", 500, 450);
+      doc.moveTo(620, 460).lineTo(710, 460).stroke(); 
+
+      // Load GM Signature Image
+      const gmSignaturePath = path.join(__dirname, "../assets/stmakalla.png"); 
+      if (fs.existsSync(gmSignaturePath)) {
+        doc.image(gmSignaturePath, 580, 470, { width: 130, height: 50 });
+      } else {
+        console.warn("GM Signature image not found:", gmSignaturePath);
       }
-      doc.rect(30, 30, 782, 535).stroke(secondaryColor, 1);
-      doc.undash();
-
-      // **✅ Add Watermark**
-      doc.fontSize(80)
-        .fillColor("#E0E0E0") // Light gray for transparency effect
-        .opacity(0.2) // Reduce opacity for watermark effect
-        .rotate(45, { origin: [421, 298] }) // Rotate diagonally
-        .text("Makalla Technology Solutions", 100, 150, { align: "center", width: 842 });
-
-      doc.rotate(0).opacity(1); // Reset rotation & opacity
-
-      // Header
-      doc.fontSize(28).font(titleFont).fillColor(primaryColor).text("Makalla Technology Solutions", 0, 50, { align: "center", width: 842 });
-      doc.fontSize(42).font(titleFont).fillColor(secondaryColor).text("Certificate of Completion", 0, 120, { align: "center", width: 842 });
-      doc.moveTo(100, 180).lineTo(742, 180).stroke(primaryColor, 2);
-
-      // Recipient
-      doc.fontSize(28).font(bodyFont).fillColor("#34495E").text("This certificate is proudly presented to", 0, 200, { align: "center", width: 842 });
-      doc.fontSize(36).font(titleFont).fillColor(primaryColor).text(studentName.toUpperCase(), 0, 240, { align: "center", width: 842 });
-
-      // Course Name
-      doc.fontSize(24).font(bodyFont).fillColor("#34495E").text("For successfully completing the course in", 0, 320, { align: "center", width: 842 });
-      doc.fontSize(32).font(titleFont).fillColor(secondaryColor).text(courseName.toUpperCase(), 0, 360, { align: "center", width: 842 });
-
-      // Certificate & Student ID
-      doc.fontSize(16).font(bodyFont).fillColor("#7F8C8D").text(`Certificate ID: ${certificateId}`, 0, 440, { align: "center", width: 842 });
-      doc.fontSize(16).font(bodyFont).fillColor("#7F8C8D").text(`Student ID: ${studentId}`, 0, 470, { align: "center", width: 842 });
 
       // QR Code
-      const qrCodeImage = await QRCode.toDataURL(qrCodeData);
-      doc.image(qrCodeImage, 700, 450, { width: 100, height: 100 });
+      const qrCodeImage = await QRCode.toDataURL(qrCodeData, { errorCorrectionLevel: "H", width: 200 });
+      doc.image(qrCodeImage, 650, 30, { width: 150, height: 150 });
 
-      // Footer
-      doc.fontSize(14).font(bodyFont).fillColor("#7F8C8D").text("This certificate is issued by Makalla Technology Solutions", 0, 540, { align: "center", width: 842 });
-      doc.fontSize(12).font(bodyFont).fillColor("#7F8C8D").text("Powered by Makalla Technology Solutions", 0, 560, { align: "center", width: 842 });
+      // Stamp Image
+      const stampImagePath = path.join(__dirname, "../assets/stmakalla.png"); 
+      if (fs.existsSync(stampImagePath)) {
+        doc.image(stampImagePath, 300, 400, { width: 150, height: 150 });
+      } else {
+        console.warn("Stamp image not found:", stampImagePath);
+      }
+
+      doc.save();
+
+      // Set transparency
+      doc.opacity(0.2); // Increased opacity for better visibility
+
+      // Move to the starting position (bottom-left)
+      doc.fontSize(60)
+        .fillColor("#CCCCCC") // Light gray for subtle effect
+        .rotate(-30, { origin: [200, 400] }) // Rotate text diagonally
+        .text("Makalla Technology Solutions", 100, 400, { align: "center", width: 1000 });
+
+      doc.restore(); // Restore the document state
 
       doc.end();
 
-      stream.on("finish", () => resolve(filePath));
+      stream.on("finish", () => {
+        resolve(filePath);
+      });
       stream.on("error", (error) => reject(error));
     } catch (error) {
+      console.error("Error generating certificate PDF:", error);
       reject(error);
     }
   });
