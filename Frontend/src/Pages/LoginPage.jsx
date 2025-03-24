@@ -10,7 +10,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/"); // Redirect to home page if the user is logged in
+      navigate("/dashboard"); // Redirect to home page if the user is logged in
     }
   }, [user, navigate]);
 

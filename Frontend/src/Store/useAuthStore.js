@@ -73,10 +73,10 @@ export const useUserStore = create(
         }
       },
 
-      resetPassword: async (email) => {
+      resetPassword: async (token,password) => {
         try {
-          await axios.post("/auth/reset-password", { email });
-          toast.success("Password reset link sent");
+          await axios.put("/auth/updateNewPassword", {token, password });
+        
         } catch (error) {
           toast.error(error.response?.data?.message || "Reset failed");
         }
@@ -140,6 +140,14 @@ export const useUserStore = create(
      // Return response if needed
         } catch (error) {
           return error.response?.data?.error || "Something went wrong!";
+        }
+      },
+      requestPasswordReset: async (email) => {
+        try {
+          await axios.post("/auth/resetpassword", { email });
+          toast.success("Password reset link sent");
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Reset failed");
         }
       }
     }),

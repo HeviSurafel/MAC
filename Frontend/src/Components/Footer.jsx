@@ -1,81 +1,127 @@
-import React from 'react';
-import { FaFacebookF, FaDribbble, FaLinkedinIn, FaInstagram, FaBehance } from 'react-icons/fa';
-import logo from '../assets/Makalla Code Acadamey-01.jpg';
+// src/Components/Footer.js
+import React, { useState } from 'react';
+import Modal from './Modal';
 
 const Footer = () => {
-  return (
-    <div className="w-full bg-gradient-to-r from-blue-600 to-teal-500  py-10 px-6 md:px-10 mt-auto">
-      <div className="max-w-[1480px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
-        {/* Logo and Contact Section */}
-        <div>
-          <img src={logo} className="h-[40px]" alt="Logo" />
-          <h3 className="text-2xl font-bold mt-4 text-white">Contact Us</h3>
-          <p className="text-gray-200 text-base mt-2">Call: +251 934 333 999</p>
-          <p className="text-gray-200 text-base mt-2">+251 934 333 111</p>
-          <p className="text-gray-200 text-base mt-2 ">Email:makallatechnologysolutions@gmail.com</p>
-          <div className="flex gap-3 py-3">
-            {[FaFacebookF, FaDribbble, FaLinkedinIn, FaInstagram, FaBehance].map((Icon, index) => (
-              <div
-                key={index}
-                className="p-3 bg-white/10 rounded-lg hover:bg-white/20 transition duration-300 cursor-pointer"
-              >
-                <Icon size={20} className="text-white hover:text-blue-200 transition duration-300" />
-              </div>
-            ))}
-          </div>
-        </div>
+  const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [isTermsModalOpen, setTermsModalOpen] = useState(false);
+  const [isCookieModalOpen, setCookieModalOpen] = useState(false);
 
-        {/* Explore Section */}
-        <div>
-          <h3 className="text-xl font-bold text-white">Explore</h3>
-          <ul className="mt-4">
-            {['Home', 'About', 'Products', 'Blog', 'Contact'].map((item, index) => (
-              <li
-                key={index}
-                className="py-2 text-gray-200 hover:text-white transition duration-200 cursor-pointer"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Category Section */}
-        <div>
-          <h3 className="text-xl font-bold text-white">Category</h3>
-          <ul className="mt-4">
-            {['Web Development', 'App Development', 'Computer Maintenance', 'Graphics Design'].map(
-              (item, index) => (
-                <li
-                  key={index}
-                  className="py-2 text-gray-200 hover:text-white transition duration-200 cursor-pointer"
-                >
-                  {item}
-                </li>
-              ))}
-          </ul>
-        </div>
-
-        {/* Subscribe Section */}
-        <div>
-          <h3 className="text-xl font-bold text-white">Subscribe</h3>
-          <form className="mt-4">
-            <input
-              className="bg-white/10 p-3 w-full rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white"
-              placeholder="Enter your email"
-            />
-            <button className="w-full mt-3 px-4 py-2 rounded-lg bg-white text-blue-600 font-semibold hover:bg-gray-100 transition duration-200">
-              Subscribe Now
-            </button>
-          </form>
-        </div>
+  // Privacy Policy Content
+  const privacyPolicyContent = (
+    <div>
+      <div className="flex justify-center items-center mb-4">
+        <img src="/path-to-logo.png" alt="Privacy Logo" className="h-12 mr-4" />
+        <h2 className="text-xl font-semibold">Privacy Policy</h2>
       </div>
+      <p className="mb-2"><strong>Last Updated:</strong> March 24, 2025</p>
+      <ol className="list-decimal pl-5 space-y-2">
+        <li><strong>Information We Collect</strong><br />
+          We collect information that you provide directly to us, including:
+          <ul className="list-inside list-disc">
+            <li>Name and contact information</li>
+            <li>Account credentials</li>
+            <li>Payment information</li>
+            <li>Profile information</li>
+            <li>Communication preferences</li>
+          </ul>
+        </li>
+        <li><strong>How We Use Your Information</strong><br />
+          We use the information we collect to:
+          <ul className="list-inside list-disc">
+            <li>Provide and maintain our services</li>
+            <li>Process your payments</li>
+            <li>Send you important updates</li>
+            <li>Improve our services</li>
+            <li>Respond to your requests</li>
+          </ul>
+        </li>
+        <li><strong>Information Sharing</strong><br />
+          We do not sell or rent your personal information to third parties. We may share your information only in the following circumstances:
+          <ul className="list-inside list-disc">
+            <li>With your consent</li>
+            <li>To comply with legal obligations</li>
+            <li>To protect our rights and safety</li>
+          </ul>
+        </li>
+        <li><strong>Data Security</strong><br />
+          We implement appropriate security measures to protect your personal information, including:
+          <ul className="list-inside list-disc">
+            <li>Encryption of sensitive data</li>
+            <li>Regular security assessments</li>
+            <li>Access controls and authentication</li>
+          </ul>
+        </li>
+        <li><strong>Your Rights</strong><br />
+          You have the right to:
+          <ul className="list-inside list-disc">
+            <li>Access your personal information</li>
+            <li>Correct inaccurate data</li>
+            <li>Request deletion of your data</li>
+            <li>Opt-out of communications</li>
+          </ul>
+        </li>
+        <li><strong>Contact Us</strong><br />
+          If you have any questions about this Privacy Policy, please contact us at:
+          <p className="mt-2">Email: mikitesfaye09025@gmail.com</p>
+          <p>Phone: +251934333999</p>
+        </li>
+      </ol>
+    </div>
+  );
 
-      <div className="border-t border-white/20 mt-8 pt-6 text-center">
-        <p className="text-gray-200 text-sm">
+  return (
+    <div className="bg-gradient-to-r from-blue-600 to-teal-500 py-10 px-6">
+      <div className="flex flex-col md:flex-row justify-center items-center text-center md:text-left gap-6">
+        <p className="text-white text-sm">
           &copy; {new Date().getFullYear()} Makalla Academy. All rights reserved.
         </p>
+
+        {/* Footer Links */}
+        <div className="flex gap-8">
+          <button
+            onClick={() => setPrivacyModalOpen(true)}
+            className="text-white text-sm hover:underline"
+          >
+            Privacy Policy
+          </button>
+          <button
+            onClick={() => setTermsModalOpen(true)}
+            className="text-white text-sm hover:underline"
+          >
+            Terms of Service
+          </button>
+          <button
+            onClick={() => setCookieModalOpen(true)}
+            className="text-white text-sm hover:underline"
+          >
+            Cookie Policy
+          </button>
+        </div>
       </div>
+
+      {/* Conditionally Render Modals */}
+      {isPrivacyModalOpen && (
+        <Modal
+          title="Privacy Policy"
+          content={privacyPolicyContent}
+          onClose={() => setPrivacyModalOpen(false)}
+        />
+      )}
+      {isTermsModalOpen && (
+        <Modal
+          title="Terms of Service"
+          content="Your Terms of Service content goes here."
+          onClose={() => setTermsModalOpen(false)}
+        />
+      )}
+      {isCookieModalOpen && (
+        <Modal
+          title="Cookie Policy"
+          content="Your Cookie Policy content goes here."
+          onClose={() => setCookieModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // to navigate after successful submission
 import { toast } from "react-hot-toast"; // For displaying success/error notifications
-import useUserStore from "../Store/useAuthStore";
+import {useUserStore} from "../Store/useAuthStore";
 const ResetPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -9,6 +9,7 @@ const ResetPassword = () => {
   const history = useNavigate();
   const { requestPasswordReset } = useUserStore();
   const handleSubmit = (e) => {
+    e.preventDefault();
     requestPasswordReset(email);
   };
 

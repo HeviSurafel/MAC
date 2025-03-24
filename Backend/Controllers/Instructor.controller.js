@@ -347,7 +347,7 @@ const generateCertificates = asyncHandler(async (req, res) => {
           .createHash("sha256")
           .update(certificateId)
           .digest("hex");
-        const verificationUrl = `https://makalla.com/verify/${hashCertificateId}`;
+        const verificationUrl = `http://localhost:5173/verify/${hashCertificateId}`;
 
         // Prepare QR Code Data
         const qrCodeData = JSON.stringify({

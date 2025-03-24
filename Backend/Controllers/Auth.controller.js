@@ -184,6 +184,7 @@ const getAllUser = asyncHandler( async (req, res) => {
 
 // Request Password Reset
 const requestPasswordReset =asyncHandler(  async (req, res) => {
+  console.log(req.body);
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -195,7 +196,7 @@ const requestPasswordReset =asyncHandler(  async (req, res) => {
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = resetTokenExpires;
     await user.save();
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
     const mailOptions = {
       to: user.email,
       from: "surafelwondu47@gmail.com",
@@ -206,7 +207,7 @@ const requestPasswordReset =asyncHandler(  async (req, res) => {
         If you did not request this, please ignore this email and your password will remain unchanged.\n`,
     };
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: 'Password reset email sent' });
+    res.status(200).json({ message: 'Password reset email sent', email });
   } catch (error) {
     console.error('Request Password Reset Error:', error);
     res.status(500).json({ message: 'Something went wrong' });
@@ -234,8 +235,9 @@ const updatePassword = asyncHandler( async (req, res) => {
 
 // Reset Password
 const resetPassword = asyncHandler( async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
+  console.log("req.params",req.body);
+ 
+  const {token, password } = req.body;
   try {
     const user = await User.findOne({
       resetPasswordToken: token,
@@ -297,5 +299,6 @@ module.exports = {
   getProfile,
   getAllUser,
   requestPasswordReset,
-  resetPassword,updatePassword
+  resetPassword,
+  updatePassword
 };

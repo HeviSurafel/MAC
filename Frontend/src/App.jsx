@@ -27,6 +27,7 @@ import Blog from "./Pages/Blog";
 import CreateBlog from "./Dashboard/Admin/CreateBlog";
 import BlogDetail from "./Pages/BlogDetail";
 import { useLocation } from "react-router-dom"; // Import useLocation
+import SetNewPassword from "./Pages/SetNewPassword";
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
@@ -69,6 +70,8 @@ function App() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/services" element={<ServicePage />} />
             <Route path="/blog/detail/:id" element={<BlogDetail />} />
+            <Route path="/reset-password/:token" element={<SetNewPassword/>} />
+
             {user ? (
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardOverview />} />
