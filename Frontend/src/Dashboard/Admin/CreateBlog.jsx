@@ -17,7 +17,6 @@ function CreateBlog() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("title", formdata.title);

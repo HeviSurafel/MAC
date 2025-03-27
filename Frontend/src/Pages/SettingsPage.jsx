@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import PasswordModal from "./PasswordModal";
-import {useUserStore} from "../Store/useAuthStore"
+import useUserStore from "../Store/useAuthStore"
 const SettingsPage = () => {
   const [isModalOpen, setModalOpen] = useState(false);
 const {user,updatePassword}=useUserStore();

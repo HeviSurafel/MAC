@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
-import { useUserStore } from "../Store/useAuthStore";
+import  useUserStore from "../Store/useAuthStore";
 import makalla from "../assets/makala man.JPG";
 
 const ContactUsPage = () => {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaEdit, FaTrash, FaInfoCircle } from "react-icons/fa";
-import { useUserStore } from "../../../Store/useAuthStore";
+import  useUserStore  from "../../../Store/useAuthStore";
 
 const CourseCard = ({ course, openEditModal, deleteCourse }) => {
   const { user } = useUserStore();

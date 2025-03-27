@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom"; // To get the token from URL params
 import { toast } from "react-hot-toast"; // For displaying success/error notifications
-import { useUserStore } from "../Store/useAuthStore"; // Assuming you have a store for managing user state
+import  useUserStore  from "../Store/useAuthStore"; // Assuming you have a store for managing user state
 
 const SetNewPassword = () => {
   const { token } = useParams(); // Get the token from the URL

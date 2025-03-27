@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {useUserStore} from "../../Store/useAuthStore"
+import useUserStore from "../../Store/useAuthStore"
 const EditModal = ({ section, closeModal, user }) => {
   const [formData, setFormData] = useState({
     address: user?.address,

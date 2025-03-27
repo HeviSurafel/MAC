@@ -1,7 +1,7 @@
 import React from "react";
 import { FaPen } from "react-icons/fa";
 import Logo from "../../assets/image01.jpg";
-import { useUserStore } from "../../Store/useAuthStore";
+import  useUserStore  from "../../Store/useAuthStore";
 
 function ProfileSection({ onEdit }) {
   const { user } = useUserStore();
@@ -12,8 +12,8 @@ function ProfileSection({ onEdit }) {
         <div>
           <div className="text-xl font-semibold"></div>
           <div className="text-sm text-gray-500 uppercase">
-            {user.role === "student" ? "STUDENT" : "INSTRACTOR" + "\t"}{" "}
-            {user.name}
+            {user.role === "student" ? "STUDENT" : user.role==="instructor" ? "INSTRACTOR" :"Admin" + "\t"}{" "}
+            {user?.firstName} 
           </div>
           <div className="text-sm text-gray-500 uppercase">
             {new Date(user.dateOfBirth).toLocaleDateString("en-US", {

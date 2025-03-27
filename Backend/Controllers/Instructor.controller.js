@@ -348,7 +348,6 @@ const generateCertificates = asyncHandler(async (req, res) => {
           .update(certificateId)
           .digest("hex");
         const verificationUrl = `http://localhost:5173/verify/${hashCertificateId}`;
-
         // Prepare QR Code Data
         const qrCodeData = JSON.stringify({
           studentId: student._id,

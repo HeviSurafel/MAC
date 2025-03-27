@@ -9,42 +9,52 @@ const Contact = require("../Model/ContactUs.model");
 const Payment = require("../Model/Payment.model");
 const Certificate = require("../Model/Certeficate.model");
 const fs = require("fs").promises;
-const files=require("fs");
-const crypto = require('crypto');
+const files = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 const asyncHandler = require("express-async-handler");
 const Blog = require("../Model/Blog.model");
+const FormData = require('form-data');
 const Like = require("../Model/Like.model");
 const Comment = require("../Model/Comment.model");
 const cloudinary = require("../Middleware/cloudinary");
 const Batch = require("../Model/Batch.model");
 const { strict } = require("assert");
+const axios = require("axios");
+const ACCESS_TOKEN_FACEBOOK =
+  "EAAOOsAiHdtMBO3wAZBnwh40am6ZBahtOa8Vis3Sx9r08jV7HvRbGyZBvfs57LuBXWNL7a8Xvu1V28Xw2wCmPCeOfdRjTBqquYaKojAlwtD4o8DrjaIX0bviChNhLVp6BczZBnGtBBNo6i0e1IqplYl9LRQRMUJDkzipJotgvZBkZCgmOQagGNX6BG7HZAJMuEGz";
+const PAGE_ID = "538212866051933"; // Replace with your actual Facebook Page ID
+
 const AdminController = {
-  getDashboard: asyncHandler(async (req, res) => { 
+  getDashboard: asyncHandler(async (req, res) => {
     try {
       const totalUsers = await User.countDocuments();
       const totalStudents = await User.countDocuments({ role: "student" });
-      const totalInstructors = await User.countDocuments({ role: "instructor" });
+      const totalInstructors = await User.countDocuments({
+        role: "instructor",
+      });
       const totalAdmins = await User.countDocuments({ role: "admin" });
 
       const totalCourses = await Course.countDocuments();
       const totalPayments = await Payment.countDocuments();
-      
+
       // 🔄 Calculate Total Revenue (Including Registration Fees)
       const paymentRevenue = await Payment.aggregate([
         { $group: { _id: null, total: { $sum: "$totalAmountPaid" } } },
       ]);
 
       const registrationRevenue = await User.aggregate([
-        { 
-          $match: { registrationFee: { $exists: true, $gt: 0 } } // Ensure registrationFee exists
+        {
+          $match: { registrationFee: { $exists: true, $gt: 0 } }, // Ensure registrationFee exists
         },
-        { 
-          $group: { _id: null, total: { $sum: "$registrationFee" } } } 
+        {
+          $group: { _id: null, total: { $sum: "$registrationFee" } },
+        },
       ]);
 
-      const totalRevenue = (paymentRevenue.length ? paymentRevenue[0].total : 0) +
-                           (registrationRevenue.length ? registrationRevenue[0].total : 0);
+      const totalRevenue =
+        (paymentRevenue.length ? paymentRevenue[0].total : 0) +
+        (registrationRevenue.length ? registrationRevenue[0].total : 0);
 
       const activeUsers = await User.countDocuments({ status: "active" });
       const suspendedUsers = await User.countDocuments({ status: "suspended" });
@@ -98,10 +108,10 @@ const AdminController = {
     }
   }),
 
-   createUser : asyncHandler(async (req, res) => {
+  createUser: asyncHandler(async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
-  
+
     try {
       const {
         firstName,
@@ -121,7 +131,7 @@ const AdminController = {
         registrationFee,
         batch,
       } = req.body;
-  
+
       // Check if user with the same email already exists
       const existingUser = await User.findOne({ email }).session(session);
       if (existingUser) {
@@ -132,14 +142,18 @@ const AdminController = {
       // ✅ Check if the batch is completed before allowing enrollment
       if (batch) {
         const batchData = await Batch.findById(batch).session(session);
-        
+
         if (batchData && batchData.batchStatus === "completed") {
           await session.abortTransaction();
           session.endSession();
-          return res.status(400).json({ message: "Batch is completed. No more students can be enrolled." });
+          return res
+            .status(400)
+            .json({
+              message: "Batch is completed. No more students can be enrolled.",
+            });
         }
       }
-  
+
       // Create the user
       const user = new User({
         firstName,
@@ -155,25 +169,28 @@ const AdminController = {
         registrationFee,
         batch: batch || null,
       });
-  
+
       await user.save({ session });
-  
+
       // ✅ Handle student enrollment (Ensuring batch isn't completed)
       if (role === "student") {
         for (let i = 0; i < courses.length; i++) {
           const enrolledCourse = await Course.findById(courses[i])
             .populate("batches")
             .session(session);
-            console.log("enrolledCourse",enrolledCourse)
+          console.log("enrolledCourse", enrolledCourse);
           if (enrolledCourse) {
-            if (enrolledCourse.batches.every((b) => b.batchStatus === "completed")) {
+            if (
+              enrolledCourse.batches.every((b) => b.batchStatus === "completed")
+            ) {
               await session.abortTransaction();
               session.endSession();
               return res.status(400).json({
-                message: "Course batch is completed. No more students can be enrolled.",
+                message:
+                  "Course batch is completed. No more students can be enrolled.",
               });
             }
-  
+
             // ✅ Create a payment record for the student
             const payment = new Payment({
               student: user._id,
@@ -183,14 +200,14 @@ const AdminController = {
               batch,
             });
             await payment.save({ session });
-  
+
             // ✅ Add student to the section
             const sectionName = section.split(",")[i] || "A"; // Default to "A" if not provided
             let existingSection = await Section.findOne({
               course: enrolledCourse._id,
               section: sectionName,
             }).session(session);
-  
+
             if (!existingSection) {
               existingSection = new Section({
                 course: enrolledCourse._id,
@@ -205,19 +222,19 @@ const AdminController = {
               }
             }
             await existingSection.save({ session });
-  
+
             // ✅ Add student to the course's studentsEnrolled array
             if (!enrolledCourse.studentsEnrolled.includes(user._id)) {
               enrolledCourse.studentsEnrolled.push(user._id);
               await enrolledCourse.save({ session });
             }
-  
+
             // ✅ Ensure a single assessment per course + section
             let assessment = await Assessment.findOne({
               course: enrolledCourse._id,
               section: existingSection._id,
             }).session(session);
-  
+
             if (!assessment) {
               assessment = new Assessment({
                 studentResults: [
@@ -236,7 +253,7 @@ const AdminController = {
               const studentExists = assessment.studentResults.some(
                 (record) => record.student.toString() === user._id.toString()
               );
-  
+
               if (!studentExists) {
                 assessment.studentResults.push({
                   student: user._id,
@@ -246,15 +263,15 @@ const AdminController = {
                 });
               }
             }
-  
+
             await assessment.save({ session });
           }
         }
       }
-  
+
       await session.commitTransaction();
       session.endSession();
-  
+
       return res.status(200).json({
         message: `User created and added to sections successfully.`,
       });
@@ -266,14 +283,11 @@ const AdminController = {
       });
     }
   }),
-  
 
-
-
-  createCourse : asyncHandler(async (req, res) => { 
+  createCourse: asyncHandler(async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
-  
+
     try {
       const {
         courseName,
@@ -289,48 +303,59 @@ const AdminController = {
         batchStatus = "incomplete", // Default batch status
         registrationFee,
       } = req.body;
-  
+
       // Validate required fields for course
       if (!courseName || !courseCode || !cost || !paymentType) {
         return res.status(400).json({
-          message: "Course name, course code, cost, and payment type are required.",
+          message:
+            "Course name, course code, cost, and payment type are required.",
         });
       }
-  
+
       const costValue = Number(cost);
       const registrationFeeValue = Number(registrationFee);
-  
+
       // Validate cost and registration fee
       if (isNaN(costValue) || costValue < 0) {
-        return res.status(400).json({ message: "Cost must be a positive number." });
+        return res
+          .status(400)
+          .json({ message: "Cost must be a positive number." });
       }
-  
-      if (registrationFee && (isNaN(registrationFeeValue) || registrationFeeValue < 0)) {
-        return res.status(400).json({ message: "Registration fee must be a positive number." });
+
+      if (
+        registrationFee &&
+        (isNaN(registrationFeeValue) || registrationFeeValue < 0)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Registration fee must be a positive number." });
       }
-  
+
       // Validate start and end dates
       if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-        return res.status(400).json({ message: "End date must be after start date." });
+        return res
+          .status(400)
+          .json({ message: "End date must be after start date." });
       }
-  
+
       // Validate payment type
       if (!["monthly", "one-time"].includes(paymentType)) {
         return res.status(400).json({
           message: "Invalid payment type. Allowed: 'monthly', 'one-time'.",
         });
       }
-  
+
       // Validate duration for monthly payments
       if ((!duration || duration <= 0) && paymentType === "monthly") {
         return res.status(400).json({
-          message: "Duration must be specified for monthly payments and be greater than 0.",
+          message:
+            "Duration must be specified for monthly payments and be greater than 0.",
         });
       }
-  
+
       // Check if the course already exists with the same courseCode
       let course = await Course.findOne({ courseCode }).session(session);
-  
+
       if (!course) {
         // If course doesn't exist, create a new course
         course = new Course({
@@ -350,11 +375,15 @@ const AdminController = {
         });
         await course.save({ session });
       }
-  
+
       // Generate a unique batch name for the course
-      const batchCount = await Batch.countDocuments({ course: course._id }).session(session);
-      const batchName = `${course.courseName} Batch ${String(batchCount + 1).padStart(2, "0")}`;
-  
+      const batchCount = await Batch.countDocuments({
+        course: course._id,
+      }).session(session);
+      const batchName = `${course.courseName} Batch ${String(
+        batchCount + 1
+      ).padStart(2, "0")}`;
+
       // Create the batch with default batchStatus as "incomplete"
       const batch = new Batch({
         name: batchName,
@@ -364,21 +393,28 @@ const AdminController = {
         students: [],
         batchStatus: "incomplete", // Explicitly setting batch status
       });
-  
+
       await batch.save({ session });
-  
+
       // Associate the batch with the course
       course.batches.push(batch._id);
       await course.save({ session });
-  
+
       // Commit the transaction
       await session.commitTransaction();
-  
-      res.status(201).json({ message: "Batch added successfully", course, batch });
+
+      res
+        .status(201)
+        .json({ message: "Batch added successfully", course, batch });
     } catch (error) {
       // If any error occurs, abort the transaction
       await session.abortTransaction();
-      res.status(500).json({ message: "An error occurred while creating the course.", error: error.message });
+      res
+        .status(500)
+        .json({
+          message: "An error occurred while creating the course.",
+          error: error.message,
+        });
       console.error("Error in createCourse:", error);
     } finally {
       // End the session
@@ -386,136 +422,133 @@ const AdminController = {
     }
   }),
 
-
-
-   getFilteredByCourseSectionAndBatch : asyncHandler(async (req, res) => {
+  getFilteredByCourseSectionAndBatch: asyncHandler(async (req, res) => {
     try {
-     
       const { courseId, section, batch } = req.params;
 
-        // Ensure courseId is valid ObjectId
-        if (!mongoose.isValidObjectId(courseId)) {
-            return res.status(400).json({ message: "Invalid course _id format" });
+      // Ensure courseId is valid ObjectId
+      if (!mongoose.isValidObjectId(courseId)) {
+        return res.status(400).json({ message: "Invalid course _id format" });
+      }
+
+      // Base query to find the course by ID
+      let query = { _id: new mongoose.Types.ObjectId(courseId) };
+
+      // Fetch the course based on the query object
+      const course = await Course.findOne(query)
+        .populate({
+          path: "studentsEnrolled",
+          select: "firstName lastName email section batch", // Include section and batch for each student
+          options: { lean: true },
+        })
+        .populate("instructors", "firstName lastName email")
+        .populate({
+          path: "batches",
+          select: "name _id", // Select the fields you need from the Batch model
+        })
+        .lean();
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Find the section data
+      const sectionData = await Section.findOne({
+        course: courseId,
+        section: section,
+        batch: batch, // Changed selectedBatch to batch
+      }).populate({
+        path: "students",
+        select: "firstName lastName email studentId",
+      });
+
+      if (!sectionData) {
+        return res.status(404).json({ message: "Section not found." });
+      }
+
+      // Find assessments for the course and section
+      const assessments = await Assessment.find({
+        course: courseId,
+        section: sectionData._id,
+      }).populate({
+        path: "studentResults.student",
+        select: "firstName lastName email studentId",
+      });
+
+      if (!assessments.length) {
+        return res
+          .status(404)
+          .json({ message: "No assessments found for this section." });
+      }
+
+      // Map students with their assessment results
+      const studentsWithAssessment = sectionData.students.map((student) => {
+        const studentAssessment = assessments.find((assessment) =>
+          assessment.studentResults.some(
+            (sr) => sr.student._id.toString() === student._id.toString()
+          )
+        );
+
+        if (!studentAssessment) {
+          return {
+            _id: student._id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            email: student.email,
+            studentId: student.studentId,
+            assignmentScore: 0,
+            examScore: 0,
+            finalScore: 0,
+          };
         }
 
-        // Base query to find the course by ID
-        let query = { _id: new mongoose.Types.ObjectId(courseId) };
+        const studentResult = studentAssessment.studentResults.find(
+          (sr) => sr.student._id.toString() === student._id.toString()
+        );
 
-        // Fetch the course based on the query object
-        const course = await Course.findOne(query)
-            .populate({
-                path: "studentsEnrolled",
-                select: "firstName lastName email section batch", // Include section and batch for each student
-                options: { lean: true },
-            })
-            .populate("instructors", "firstName lastName email")
-            .populate({
-                path: "batches",
-                select: "name _id", // Select the fields you need from the Batch model
-            })
-            .lean();
-        if (!course) {
-            return res.status(404).json({ message: "Course not found" });
-        }
+        return {
+          _id: student._id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          studentId: student.studentId,
+          assignmentScore: studentResult?.assignmentScore || 0,
+          examScore: studentResult?.examScore || 0,
+          finalScore: studentResult?.finalScore || 0,
+        };
+      });
 
-        // Find the section data
-        const sectionData = await Section.findOne({
-            course: courseId,
-            section: section,
-            batch: batch, // Changed selectedBatch to batch
-        }).populate({
-            path: "students",
-            select: "firstName lastName email studentId",
-        });
-
-        if (!sectionData) {
-            return res.status(404).json({ message: "Section not found." });
-        }
-
-        // Find assessments for the course and section
-        const assessments = await Assessment.find({
-            course: courseId,
-            section: sectionData._id,
-        }).populate({
-            path: "studentResults.student",
-            select: "firstName lastName email studentId",
-        });
-
-        if (!assessments.length) {
-            return res.status(404).json({ message: "No assessments found for this section." });
-        }
-
-        // Map students with their assessment results
-        const studentsWithAssessment = sectionData.students.map((student) => {
-            const studentAssessment = assessments.find((assessment) =>
-                assessment.studentResults.some(
-                    (sr) => sr.student._id.toString() === student._id.toString()
-                )
-            );
-
-            if (!studentAssessment) {
-                return {
-                    _id: student._id,
-                    firstName: student.firstName,
-                    lastName: student.lastName,
-                    email: student.email,
-                    studentId: student.studentId,
-                    assignmentScore: 0,
-                    examScore: 0,
-                    finalScore: 0,
-                };
-            }
-
-            const studentResult = studentAssessment.studentResults.find(
-                (sr) => sr.student._id.toString() === student._id.toString()
-            );
-
-            return {
-                _id: student._id,
-                firstName: student.firstName,
-                lastName: student.lastName,
-                email: student.email,
-                studentId: student.studentId,
-                assignmentScore: studentResult?.assignmentScore || 0,
-                examScore: studentResult?.examScore || 0,
-                finalScore: studentResult?.finalScore || 0,
-            };
-        });
-
-        // Return the course object with student results in the desired structure
-        res.status(200).json([
-            {
-                _id: course._id,
-                courseName: course.courseName,
-                courseCode: course.courseCode,
-                description: course.description,
-                courseStatus: course.courseStatus,
-                instructors: course.instructors, // Instructors array
-                studentsEnrolled: studentsWithAssessment, // Replaced with mapped students
-                durationInMonths: course.durationInMonths,
-                cost: course.cost,
-                registrationFee: course.registrationFee,
-                batches: course.batches, // Batches array
-                startDate: course.startDate,
-                endDate: course.endDate,
-                createdAt: course.createdAt,
-                updatedAt: course.updatedAt,
-            },
-        ]);
+      // Return the course object with student results in the desired structure
+      res.status(200).json([
+        {
+          _id: course._id,
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+          description: course.description,
+          courseStatus: course.courseStatus,
+          instructors: course.instructors, // Instructors array
+          studentsEnrolled: studentsWithAssessment, // Replaced with mapped students
+          durationInMonths: course.durationInMonths,
+          cost: course.cost,
+          registrationFee: course.registrationFee,
+          batches: course.batches, // Batches array
+          startDate: course.startDate,
+          endDate: course.endDate,
+          createdAt: course.createdAt,
+          updatedAt: course.updatedAt,
+        },
+      ]);
     } catch (error) {
-        console.error("Error in getFilteredByCourseSectionAndBatch:", error);
-        res.status(500).json({ message: error.message });
+      console.error("Error in getFilteredByCourseSectionAndBatch:", error);
+      res.status(500).json({ message: error.message });
     }
-}),
-
-  
+  }),
 
   getAllCourses: asyncHandler(async (req, res) => {
     try {
       const { courseId, section, batch } = req.query;
 
       let query = {};
-  
+
       // Validate and build query for courseId
       if (courseId) {
         if (!mongoose.isValidObjectId(courseId)) {
@@ -523,9 +556,9 @@ const AdminController = {
         }
         query._id = new mongoose.Types.ObjectId(courseId);
       }
-  
+
       let studentFilter = {};
-  
+
       // If section and courseId are provided, filter students by section
       if (section && courseId) {
         const sectionDoc = await Section.findOne({
@@ -534,18 +567,20 @@ const AdminController = {
         })
           .select("students")
           .lean();
-  
+
         if (sectionDoc) {
-          const studentIds = sectionDoc.students.map((id) => new mongoose.Types.ObjectId(id));
+          const studentIds = sectionDoc.students.map(
+            (id) => new mongoose.Types.ObjectId(id)
+          );
           studentFilter["_id"] = { $in: studentIds };
         }
       }
-  
+
       // If batch is provided, add batch filter to query
       if (batch) {
         query.batches = { $in: [new mongoose.Types.ObjectId(batch)] };
       }
-  
+
       // Fetch courses with enrolled students and batches
       const courses = await Course.find(query)
         .populate({
@@ -559,14 +594,13 @@ const AdminController = {
           path: "batches",
         })
         .lean();
-  
- 
+
       // Fetch assessments for the requested courses and sections (only if courseId is provided)
       const assessments =
         courseId && mongoose.isValidObjectId(courseId)
           ? await Assessment.find({ course: courseId }).lean()
           : [];
-  
+
       // Create a lookup map for assessments to speed up student assessment lookups
       const assessmentMap = assessments.reduce((map, assessment) => {
         assessment.studentResults.forEach((result) => {
@@ -574,7 +608,7 @@ const AdminController = {
         });
         return map;
       }, {});
-  
+
       // Process each course
       const coursesWithAssessments = await Promise.all(
         courses.map(async (course) => {
@@ -588,10 +622,11 @@ const AdminController = {
               })
                 .select("section")
                 .lean();
-  
+
               // Fetch the student's assessment from the assessmentMap
-              const studentAssessment = assessmentMap[student._id.toString()] || {};
-  
+              const studentAssessment =
+                assessmentMap[student._id.toString()] || {};
+
               return {
                 ...student,
                 section: sectionDoc ? sectionDoc.section : "N/A",
@@ -610,45 +645,51 @@ const AdminController = {
           };
         })
       );
-  
+
       res.status(200).json(coursesWithAssessments);
     } catch (error) {
       console.error("Error fetching courses with assessments:", error);
-      res.status(500).json({ message: "Something went wrong while fetching courses." });
+      res
+        .status(500)
+        .json({ message: "Something went wrong while fetching courses." });
     }
   }),
-  
-  
 
-getAllUsers: asyncHandler(async (req, res) => {
-  try {
-    const users = await User.find(); // Fetch all users without filters or sorting
-    res.status(200).json( users );
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Something went wrong while fetching users." });
-  }
-}),
+  getAllUsers: asyncHandler(async (req, res) => {
+    try {
+      const users = await User.find(); // Fetch all users without filters or sorting
+      res.status(200).json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res
+        .status(500)
+        .json({ message: "Something went wrong while fetching users." });
+    }
+  }),
   // Get user by ID
-   getUserById : asyncHandler(async (req, res) => {
+  getUserById: asyncHandler(async (req, res) => {
     try {
       const user = await User.findById(req.params.id);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-  
+
       // Initialize an empty courses array
       let courses = [];
-  
+
       if (user.role === "student") {
         // Fetch the courses the student is enrolled in
-        courses = await Course.find({ studentsEnrolled: user._id }).populate('studentsEnrolled'); // Populate studentsEnrolled field
+        courses = await Course.find({ studentsEnrolled: user._id }).populate(
+          "studentsEnrolled"
+        ); // Populate studentsEnrolled field
       } else if (user.role === "instructor") {
         // Fetch the courses the instructor is teaching
-        courses = await Course.find({ instructors: user._id }).populate('instructors');
+        courses = await Course.find({ instructors: user._id }).populate(
+          "instructors"
+        );
       }
-  
+
       res.status(200).json({
         user: {
           id: user._id,
@@ -661,11 +702,9 @@ getAllUsers: asyncHandler(async (req, res) => {
       });
     } catch (error) {
       console.error("Error fetching user or courses:", error);
-      res.status(500).json({ message: 'Something went wrong' });
+      res.status(500).json({ message: "Something went wrong" });
     }
   }),
-  
-  
 
   // Update user
   updateUser: asyncHandler(async (req, res) => {
@@ -684,22 +723,26 @@ getAllUsers: asyncHandler(async (req, res) => {
       await user.save();
       res.status(200).json({ message: "User suspended successfully" });
     } catch (error) {
-     console.error("Error suspending user:", error);
-     res.status(500).json({ message: "Something went wrong",error:error.message }); 
+      console.error("Error suspending user:", error);
+      res
+        .status(500)
+        .json({ message: "Something went wrong", error: error.message });
     }
-}),
-UnsuspendUser: asyncHandler(async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    user.status = "active";
-    await user.save();
-    res.status(200).json({ message: "User suspended successfully" });
-  } catch (error) {
-   console.error("Error suspending user:", error);
-   res.status(500).json({ message: "Something went wrong",error:error.message }); 
-  }
-}),
+  }),
+  UnsuspendUser: asyncHandler(async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      user.status = "active";
+      await user.save();
+      res.status(200).json({ message: "User suspended successfully" });
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      res
+        .status(500)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  }),
 
   // Delete user
   deleteUser: asyncHandler(async (req, res) => {
@@ -738,35 +781,6 @@ UnsuspendUser: asyncHandler(async (req, res) => {
 
     res.status(200).json({ message: "User deleted successfully" });
   }),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   getCourseById: asyncHandler(async (req, res) => {
     try {
@@ -952,10 +966,10 @@ UnsuspendUser: asyncHandler(async (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   }),
-   getUnpaidStudents : asyncHandler(async (req, res) => {
+  getUnpaidStudents: asyncHandler(async (req, res) => {
     try {
       const { courseId, selectedBatch } = req.params;
-  
+
       // Retrieve the course and its students
       const course = await Course.findById(courseId)
         .populate({
@@ -964,11 +978,11 @@ UnsuspendUser: asyncHandler(async (req, res) => {
           select: "firstName lastName email batch registrationFee",
         })
         .select("courseName startDate durationInMonths");
-  
+
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-  
+
       // Generate the list of course months
       const startDate = new Date(course.startDate);
       const courseMonths = [];
@@ -982,9 +996,9 @@ UnsuspendUser: asyncHandler(async (req, res) => {
           })
         );
       }
-  
+
       const unpaidStudents = [];
-  
+
       // Loop through each student enrolled in the course
       for (const student of course.studentsEnrolled) {
         // Retrieve the latest payment for this student in this course
@@ -994,7 +1008,7 @@ UnsuspendUser: asyncHandler(async (req, res) => {
         })
           .sort({ createdAt: -1 }) // Get the most recent payment
           .select("amount monthsPaid course discountType totalAmountPaid");
-  
+
         if (!latestPayment) {
           console.log(
             `No payment found for student ${student.email} in course ${course.courseName}`
@@ -1004,7 +1018,7 @@ UnsuspendUser: asyncHandler(async (req, res) => {
             `Payment found but course is NULL for student ${student.email}`
           );
         }
-  
+
         // Extract paid months
         const paidMonths = latestPayment ? latestPayment.monthsPaid : [];
         // Determine unpaid months
@@ -1013,7 +1027,7 @@ UnsuspendUser: asyncHandler(async (req, res) => {
         );
         // Extract the latest monthly payment amount (fallback to `null` instead of 0)
         const monthlyPayment = latestPayment ? latestPayment.amount : null;
-  
+
         unpaidStudents.push({
           student: {
             _id: student._id,
@@ -1032,7 +1046,7 @@ UnsuspendUser: asyncHandler(async (req, res) => {
           monthlyPayment, // Corrected to ensure it reflects actual payments
         });
       }
-  
+
       res.json({ unpaidStudents });
     } catch (error) {
       console.error("Error fetching unpaid students:", error);
@@ -1040,35 +1054,50 @@ UnsuspendUser: asyncHandler(async (req, res) => {
     }
   }),
 
- makePayment : asyncHandler(async (req, res) => {
+  makePayment: asyncHandler(async (req, res) => {
     try {
       const { studentId, courseId } = req.params;
       const { amount, paymentType, selectedMonths } = req.body;
-  
-      if (!amount || !selectedMonths || selectedMonths.length === 0 || !paymentType) {
+
+      if (
+        !amount ||
+        !selectedMonths ||
+        selectedMonths.length === 0 ||
+        !paymentType
+      ) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-  
+
       // Find the course
       const course = await Course.findById(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-  
+
       // Check if the course is completed
-      if (course.status === 'completed') {
-        return res.status(400).json({ message: "This course is completed. No further payments can be made." });
+      if (course.status === "completed") {
+        return res
+          .status(400)
+          .json({
+            message:
+              "This course is completed. No further payments can be made.",
+          });
       }
-  
+
       // Find the batch related to the course (check if course has batches)
       const batch = await Batch.findOne({ course: courseId });
       if (!batch) {
-        return res.status(400).json({ message: "No batch found for this course" });
+        return res
+          .status(400)
+          .json({ message: "No batch found for this course" });
       }
-  
+
       // Find previous payments for this student in the course
-      let existingPayment = await Payment.findOne({ student: studentId, course: courseId });
-  
+      let existingPayment = await Payment.findOne({
+        student: studentId,
+        course: courseId,
+      });
+
       // If no previous payments exist, create a new one
       if (!existingPayment) {
         // Assume the amount given in the request is the monthly fee (amount assigned during user creation)
@@ -1085,12 +1114,16 @@ UnsuspendUser: asyncHandler(async (req, res) => {
         const monthlyPayment = existingPayment.amount;
         // Check if the received amount matches the expected monthly fee
         if (amount !== monthlyPayment) {
-          return res.status(400).json({ message: "The amount does not match the monthly fee" });
+          return res
+            .status(400)
+            .json({ message: "The amount does not match the monthly fee" });
         }
-  
+
         // Push new months into the array without duplicates
-        const updatedMonthsPaid = [...new Set([...existingPayment.monthsPaid, ...selectedMonths])];
-  
+        const updatedMonthsPaid = [
+          ...new Set([...existingPayment.monthsPaid, ...selectedMonths]),
+        ];
+
         // Update the existing payment record
         await Payment.updateOne(
           { student: studentId, course: courseId },
@@ -1100,13 +1133,16 @@ UnsuspendUser: asyncHandler(async (req, res) => {
           }
         );
       }
-  
+
       // Fetch all updated payments
-      const payments = await Payment.find({ student: studentId, course: courseId });
-  
+      const payments = await Payment.find({
+        student: studentId,
+        course: courseId,
+      });
+
       // Collect all paid months
       const paidMonths = payments.flatMap((payment) => payment.monthsPaid);
-  
+
       // Generate all course months from the start date
       const startDate = new Date(course.startDate);
       const courseMonths = [];
@@ -1114,15 +1150,18 @@ UnsuspendUser: asyncHandler(async (req, res) => {
         const monthDate = new Date(startDate);
         monthDate.setMonth(startDate.getMonth() + i);
         courseMonths.push(
-          monthDate.toLocaleString("default", { month: "short", year: "numeric" })
+          monthDate.toLocaleString("default", {
+            month: "short",
+            year: "numeric",
+          })
         );
       }
-  
+
       // Identify unpaid months
       const unpaidMonths = courseMonths.filter(
         (month) => !paidMonths.includes(month)
       );
-  
+
       res.status(201).json({
         message: "Payment successful",
         paidMonths,
@@ -1133,36 +1172,43 @@ UnsuspendUser: asyncHandler(async (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   }),
-  
-  
+
   resetCertificationAndCourseStatus: asyncHandler(async (req, res) => {
     try {
       const { courseId } = req.params;
-  
+
       if (!courseId) {
         return res.status(400).json({ message: "Course ID is required." });
       }
-  
+
       const course = await Course.findById(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found." });
       }
-  
+
       // Check if the course is completed
-      if (course.status === 'completed') {
-        return res.status(400).json({ message: "This course is completed. You cannot reset the course status or revoke certificates." });
+      if (course.status === "completed") {
+        return res
+          .status(400)
+          .json({
+            message:
+              "This course is completed. You cannot reset the course status or revoke certificates.",
+          });
       }
-  
+
       // Find all certificates for the course
       const certificates = await Certificate.find({ course: courseId });
-  
+
       // Mark certificates as "revoked" instead of deleting them
-      await Certificate.updateMany({ course: courseId }, { $set: { status: "revoked" } });
-  
+      await Certificate.updateMany(
+        { course: courseId },
+        { $set: { status: "revoked" } }
+      );
+
       // Set course status to "incomplete"
       course.courseStatus = "incomplete";
       await course.save();
-  
+
       res.status(200).json({
         message: "Course reset. Certificates are now revoked but not deleted.",
       });
@@ -1171,176 +1217,266 @@ UnsuspendUser: asyncHandler(async (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   }),
-  
-  // Update Grade and ReGenerate Certeficate 
 
-// Function to update grades and generate certificates
- updateGradesAndGenerateCertificates : asyncHandler(async (req, res) => {
-  const session = await mongoose.startSession();
-  try {
-    const { courseId, section, selectedBatch } = req.params;
-    const studentsData = req.body;
+  // Update Grade and ReGenerate Certeficate
 
-    if (!courseId || !section || !selectedBatch) {
-      return res.status(400).json({ message: "Invalid input data." });
-    }
+  // Function to update grades and generate certificates
+  updateGradesAndGenerateCertificates: asyncHandler(async (req, res) => {
+    const session = await mongoose.startSession();
+    try {
+      const { courseId, section, selectedBatch } = req.params;
+      const studentsData = req.body;
 
-    session.startTransaction();
+      if (!courseId || !section || !selectedBatch) {
+        return res.status(400).json({ message: "Invalid input data." });
+      }
 
-    const sectionData = await Section.findOne({ course: courseId, section })
-      .populate("course")
-      .populate("students")
-      .session(session);
+      session.startTransaction();
 
-    if (!sectionData) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: "Section not found." });
-    }
+      const sectionData = await Section.findOne({ course: courseId, section })
+        .populate("course")
+        .populate("students")
+        .session(session);
 
-    if (!sectionData.course || !sectionData.course.courseName) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: "Course data not found." });
-    }
+      if (!sectionData) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "Section not found." });
+      }
 
-    // Check if the course is already completed
-    if (sectionData.course.status === "completed") {
-      await session.abortTransaction();
-      return res.status(400).json({ message: "This course is completed. No grade updates or certificate generation allowed." });
-    }
+      if (!sectionData.course || !sectionData.course.courseName) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "Course data not found." });
+      }
 
-    let assessment = await Assessment.findOne({ course: courseId, section: sectionData._id }).session(session);
+      // Check if the course is already completed
+      if (sectionData.course.status === "completed") {
+        await session.abortTransaction();
+        return res
+          .status(400)
+          .json({
+            message:
+              "This course is completed. No grade updates or certificate generation allowed.",
+          });
+      }
 
-    if (!assessment) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: "Assessment not found." });
-    }
-
-    let certificatesGenerated = [];
-
-    for (const studentData of studentsData) {
-      const { studentId, assignmentScore, examScore, finalScore } = studentData;
-
-      let studentAssessment = assessment.studentResults.find((sr) => sr.student.toString() === studentId);
-
-      if (!studentAssessment) continue;
-
-      studentAssessment.assignmentScore = Number(assignmentScore) || 0;
-      studentAssessment.examScore = Number(examScore) || 0;
-      studentAssessment.finalScore = Number(finalScore) || 0;
-    }
-
-    await assessment.save();
-
-    for (const studentData of studentsData) {
-      const { studentId, finalScore } = studentData;
-
-      const existingCertificate = await Certificate.findOne({
-        student: studentId,
+      let assessment = await Assessment.findOne({
         course: courseId,
+        section: sectionData._id,
       }).session(session);
 
-      const certificateDir = path.join(__dirname, "../certificates");
-      const sanitizedCourseName = sectionData.course.courseName.replace(/\s+/g, "_");
-      const certificateFilePath = path.join(certificateDir, `${studentId}_${sanitizedCourseName}.pdf`);
+      if (!assessment) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "Assessment not found." });
+      }
 
-      if (existingCertificate) {
-        if (finalScore < 50) {
-          // Attempt to delete the certificate file if it exists
-          if (files.existsSync(certificateFilePath)) {
-            try {
-              await files.promises.unlink(certificateFilePath);
-            } catch (err) {
-              console.error("Error deleting certificate file:", err);
+      let certificatesGenerated = [];
+
+      for (const studentData of studentsData) {
+        const { studentId, assignmentScore, examScore, finalScore } =
+          studentData;
+
+        let studentAssessment = assessment.studentResults.find(
+          (sr) => sr.student.toString() === studentId
+        );
+
+        if (!studentAssessment) continue;
+
+        studentAssessment.assignmentScore = Number(assignmentScore) || 0;
+        studentAssessment.examScore = Number(examScore) || 0;
+        studentAssessment.finalScore = Number(finalScore) || 0;
+      }
+
+      await assessment.save();
+
+      for (const studentData of studentsData) {
+        const { studentId, finalScore } = studentData;
+
+        const existingCertificate = await Certificate.findOne({
+          student: studentId,
+          course: courseId,
+        }).session(session);
+
+        const certificateDir = path.join(__dirname, "../certificates");
+        const sanitizedCourseName = sectionData.course.courseName.replace(
+          /\s+/g,
+          "_"
+        );
+        const certificateFilePath = path.join(
+          certificateDir,
+          `${studentId}_${sanitizedCourseName}.pdf`
+        );
+
+        if (existingCertificate) {
+          if (finalScore < 50) {
+            // Attempt to delete the certificate file if it exists
+            if (files.existsSync(certificateFilePath)) {
+              try {
+                await files.promises.unlink(certificateFilePath);
+              } catch (err) {
+                console.error("Error deleting certificate file:", err);
+              }
             }
+
+            // Delete the certificate record from the database
+            await Certificate.deleteOne({
+              _id: existingCertificate._id,
+            }).session(session);
           }
-
-          // Delete the certificate record from the database
-          await Certificate.deleteOne({ _id: existingCertificate._id }).session(session);
         }
+
+        if (finalScore < 50) continue;
+
+        const student = sectionData.students.find(
+          (s) => s._id.toString() === studentId
+        );
+        if (!student) continue;
+
+        const certificateId = `CERT-${Date.now()}-${studentId}-${Math.floor(
+          Math.random() * 10000
+        )}`;
+        const hashCertificateId = crypto
+          .createHash("sha256")
+          .update(certificateId)
+          .digest("hex");
+        const verificationUrl = `https://makalla.com/verify/${hashCertificateId}`;
+
+        if (!files.existsSync(certificateDir)) {
+          await files.promises.mkdir(certificateDir, { recursive: true });
+        }
+
+        const pdfFilePath = path.join(
+          certificateDir,
+          `${studentId}_${sanitizedCourseName}.pdf`
+        );
+
+        await generateCertificatePDF(
+          student._id,
+          `${student.firstName} ${student.lastName}`,
+          sectionData.course.courseName,
+          certificateId,
+          JSON.stringify({
+            studentId,
+            name: `${student.firstName} ${student.lastName}`,
+            course: sectionData.course.courseName,
+            certificateHash: hashCertificateId,
+            verificationUrl,
+          })
+        );
+
+        const newCertificate = new Certificate({
+          student: studentId,
+          course: courseId,
+          certificateId,
+          qrCode: verificationUrl,
+        });
+
+        await newCertificate.save();
+        certificatesGenerated.push(newCertificate);
       }
 
-      if (finalScore < 50) continue;
+      // **Update Batch Status to "completed"**
+      await Batch.findByIdAndUpdate(selectedBatch, {
+        batchStatus: "completed",
+      }).session(session);
 
-      const student = sectionData.students.find((s) => s._id.toString() === studentId);
-      if (!student) continue;
-
-      const certificateId = `CERT-${Date.now()}-${studentId}-${Math.floor(Math.random() * 10000)}`;
-      const hashCertificateId = crypto.createHash("sha256").update(certificateId).digest("hex");
-      const verificationUrl = `https://makalla.com/verify/${hashCertificateId}`;
-
-      if (!files.existsSync(certificateDir)) {
-        await files.promises.mkdir(certificateDir, { recursive: true });
-      }
-
-      const pdfFilePath = path.join(certificateDir, `${studentId}_${sanitizedCourseName}.pdf`);
-
-      await generateCertificatePDF(
-        student._id,
-        `${student.firstName} ${student.lastName}`,
-        sectionData.course.courseName,
-        certificateId,
-        JSON.stringify({
-          studentId,
-          name: `${student.firstName} ${student.lastName}`,
-          course: sectionData.course.courseName,
-          certificateHash: hashCertificateId,
-          verificationUrl,
-        })
-      );
-
-      const newCertificate = new Certificate({
-        student: studentId,
-        course: courseId,
-        certificateId,
-        qrCode: verificationUrl,
+      await session.commitTransaction();
+      res.status(200).json({
+        message:
+          "Grades updated. Certificates generated for eligible students. Batch marked as completed.",
+        certificatesGenerated,
       });
-
-      await newCertificate.save();
-      certificatesGenerated.push(newCertificate);
-    }
-
-    // **Update Batch Status to "completed"**
-    await Batch.findByIdAndUpdate(selectedBatch, { batchStatus: "completed" }).session(session);
-
-    await session.commitTransaction();
-    res.status(200).json({
-      message: "Grades updated. Certificates generated for eligible students. Batch marked as completed.",
-      certificatesGenerated,
-    });
-  } catch (error) {
-    console.error("Error updating grades and generating certificates:", error);
-    await session.abortTransaction();
-    res.status(500).json({ message: "Internal server error" });
-  } finally {
-    session.endSession();
-  }
-}),
-
-
-  createBlog: asyncHandler(async (req, res) => {
-    try {
-      const { title, subdescription, description } = req.body;
-
-      // Check the images array before saving
-      const images = req.files
-        ? req.files.map((file) => `/uploads/${file.filename}`)
-        : [];
-
-      const blog = await Blog.create({
-        title,
-        subdescription,
-        description,
-        images, // Store image paths in the database
-        user: req.user._id,
-      });
-
-      res.status(201).json(blog);
     } catch (error) {
-      console.log("Error in createBlog controller", error.message);
-      res.status(500).json({ message: "Server error", error: error.message });
+      console.error(
+        "Error updating grades and generating certificates:",
+        error
+      );
+      await session.abortTransaction();
+      res.status(500).json({ message: "Internal server error" });
+    } finally {
+      session.endSession();
     }
   }),
 
+  postToFacebook: asyncHandler(async (message, images) => {
+      try {
+        const imageUrls = [];
+        
+        // First upload all images
+        for (const imagePath of images) {
+          // Create absolute path to the image
+          const absolutePath = path.join(__dirname, '..', imagePath);
+          
+          // Check if file exists
+          if (!files.existsSync(absolutePath)) {
+            throw new Error(`Image file not found: ${absolutePath}`);
+          }
+  
+          // Create form data for the upload
+          const formData = new FormData();
+          formData.append('access_token', ACCESS_TOKEN_FACEBOOK);
+          formData.append('published', 'false');
+          formData.append('source', files.createReadStream(absolutePath));
+          
+          const imageResponse = await axios.post(
+            `https://graph.facebook.com/v18.0/${PAGE_ID}/photos`,
+            formData,
+            {
+              headers: {
+                ...formData.getHeaders(),
+              },
+            }
+          );
+          
+          imageUrls.push({ media_fbid: imageResponse.data.id });
+        }
+  
+        // Create a post with the uploaded images
+        const postResponse = await axios.post(
+          `https://graph.facebook.com/v18.0/${PAGE_ID}/feed`,
+          {
+            message: message,
+            attached_media: imageUrls,
+            access_token: ACCESS_TOKEN_FACEBOOK,
+          }
+        );
+        return postResponse.data;
+      } catch (error) {
+        console.error("Error posting to Facebook:", error.response ? error.response.data : error);
+        throw new Error("Failed to post to Facebook");
+      }
+    }),
+  
+    createBlog: asyncHandler(async (req, res) => {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+  
+      try {
+        const { title, subdescription, description } = req.body;
+        const images = req.files ? req.files.map((file) => `/uploads/${file.filename}`) : [];
+  
+        // Construct the Facebook post message
+        const fbMessage = `📢 New Blog Post: ${title}\n\n${subdescription}\n\n ${description}Read more on our website!`;
+  
+        // Only attempt to post if there are images
+        if (images.length > 0) {
+          await AdminController.postToFacebook(fbMessage, images);
+        }
+  
+        // If successful, save the blog post
+        const blog = await Blog.create([{ title, subdescription, description, images, user: req.user._id }], { session });
+  
+        await session.commitTransaction();
+        session.endSession();
+  
+        res.status(201).json(blog);
+      } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+  
+        console.log("Error in createBlog controller", error.message);
+        res.status(500).json({ message: "Server error", error: error.message });
+      }
+    }),
   getBlogs: asyncHandler(async (req, res) => {
     try {
       const blogs = await Blog.find({}).populate({
@@ -1408,32 +1544,36 @@ UnsuspendUser: asyncHandler(async (req, res) => {
     }
   }),
   updateBlog: asyncHandler(async (req, res) => {
-    const { editedPost } = req.body;  // Assuming editedPost is an object containing title, subdescription, and description
+    const { editedPost } = req.body; // Assuming editedPost is an object containing title, subdescription, and description
     try {
       const id = req.params.id;
-      
+
       // Find the blog post by ID
       const blog = await Blog.findById(id);
       if (!blog) {
         return res.status(404).json({ message: "Blog not found" });
       }
-  
+
       // Update the blog post with the new data
-      const updatedBlog = await Blog.findByIdAndUpdate(id, {
-        title: editedPost.title,
-        subdescription: editedPost.subdescription,
-        description: editedPost.description,
-      }, {
-        new: true,  // Returns the updated blog post
-      });
-  
-      res.status(200).json(updatedBlog);  // Send back the updated blog post
+      const updatedBlog = await Blog.findByIdAndUpdate(
+        id,
+        {
+          title: editedPost.title,
+          subdescription: editedPost.subdescription,
+          description: editedPost.description,
+        },
+        {
+          new: true, // Returns the updated blog post
+        }
+      );
+
+      res.status(200).json(updatedBlog); // Send back the updated blog post
     } catch (error) {
       console.log("Error in updateBlog controller", error.message);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   }),
-  
+
   like: asyncHandler(async (req, res) => {
     try {
       const { userId, blogId, itemType } = req.body;
@@ -1500,13 +1640,11 @@ UnsuspendUser: asyncHandler(async (req, res) => {
       blogDoc.commentCount += 1;
       await blogDoc.save();
 
-      res
-        .status(201)
-        .json({
-          message: "Comment added",
-          newComment,
-          commentCount: blogDoc.commentCount,
-        });
+      res.status(201).json({
+        message: "Comment added",
+        newComment,
+        commentCount: blogDoc.commentCount,
+      });
     } catch (error) {
       console.error("Error creating comment:", error);
       res

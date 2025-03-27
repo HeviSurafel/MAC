@@ -57,8 +57,8 @@ const UserDetailModal = ({ userDetails, isOpen, closeModal }) => {
                     <p className="text-gray-700"><strong>Duration:</strong> {course.durationInMonths} months</p>
                     <p className="text-gray-700"><strong>Start Date:</strong> {new Date(course.startDate).toLocaleDateString()}</p>
                     <p className="text-gray-700"><strong>End Date:</strong> {new Date(course.endDate).toLocaleDateString()}</p>
-                    <p className="text-gray-700"><strong>Cost:</strong> ${course.cost}</p>
-                    <p className="text-gray-700"><strong>Registration Fee:</strong> ${course.registrationFee}</p>
+                    <p className="text-gray-700"><strong>Cost:</strong> birr{course.cost}</p>
+                    <p className="text-gray-700"><strong>Registration Fee:</strong>birr {course.registrationFee}</p>
                     <p className="text-gray-700"><strong>Instructors:</strong> {course.instructors.join(', ')}</p>
                   </div>
                 </div>

@@ -2,29 +2,29 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaBars, FaTimes, FaCaretDown } from "react-icons/fa";
 import logo from "../assets/Makalla Code Acadamey-01.jpg";
-import { useUserStore } from "../Store/useAuthStore";
+import useUserStore from "../Store/useAuthStore";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { user } = useUserStore();
+  const { user, logout } = useUserStore();
 
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+    await logout(); 
+    window.location.href = "/login"; // No need to manually remove "user"
   };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest(".dropdown")) {
+      if (!event.target.closest(".dropdown") && dropdownOpen) {
         setDropdownOpen(false);
       }
     };
 
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
+  }, [dropdownOpen]);
 
   const navLinks = ["Home", "About", "Services", "Blog", "Contact"];
 
@@ -61,9 +61,7 @@ const Navbar = () => {
             {navLinks.map((item) => (
               <Link
                 key={item}
-                to={
-                  item.toLowerCase() === "home" ? "/" : `/${item.toLowerCase()}`
-                }
+                to={item.toLowerCase() === "home" ? "/" : `/${item.toLowerCase()}`}
                 className="text-white text-sm font-medium hover:text-blue-200 transition duration-200 py-2 px-4 md:rounded-lg hover:bg-blue-500/10"
                 onClick={() => setMenuOpen(false)}
               >
@@ -76,7 +74,7 @@ const Navbar = () => {
               {user ? (
                 <div className="flex flex-col items-center space-y-4">
                   <span className="text-white text-sm font-medium">
-                    Welcome, {user?.name}!
+                    Welcome, {user?.firstName}!
                   </span>
                   <Link
                     to="/dashboard"
@@ -118,7 +116,7 @@ const Navbar = () => {
             {user ? (
               <div className="relative dropdown">
                 <span className="text-white text-sm font-medium">
-                  Welcome, {user?.name}!
+                  Welcome, {user?.firstName}!
                 </span>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}

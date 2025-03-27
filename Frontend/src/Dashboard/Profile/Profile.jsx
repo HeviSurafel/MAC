@@ -3,7 +3,7 @@ import ProfileSection from "./ProfileSection";
 import PersonalInfoSection from "./PersonalInfoSection";
 import AddressSection from "./AddressSection";
 import EditModal from "./EditModal";
-import { useUserStore } from "../../Store/useAuthStore";
+import  useUserStore  from "../../Store/useAuthStore";
 import useStudentStore from "../../Store/student.store";
 
 const Profile = () => {

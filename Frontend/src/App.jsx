@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
-import { useUserStore } from "./Store/useAuthStore";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
+import  useUserStore from "./Store/useAuthStore";
 import { Toaster } from "react-hot-toast";
 import UserManagement from "./Dashboard/Admin/UserManagement";
 import LoginPage from "./Pages/LoginPage";
@@ -26,35 +26,27 @@ import PaymentPage from "./Dashboard/Payment/PaymentPage";
 import Blog from "./Pages/Blog";
 import CreateBlog from "./Dashboard/Admin/CreateBlog";
 import BlogDetail from "./Pages/BlogDetail";
-import { useLocation } from "react-router-dom"; // Import useLocation
 import SetNewPassword from "./Pages/SetNewPassword";
+import CourseDetails from "./Components/CourseDetails";
+
+function ProtectedRoute({ children }) {
+  const { user } = useUserStore();
+  return user ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
-  const location = useLocation(); // Get current route
+  const location = useLocation();
 
-  // Define paths where the footer should NOT appear
   const hideFooter = location.pathname.startsWith("/dashboard");
 
-  // useEffect(() => {
-  //   checkAuth();
-  // }, []);
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  // if (checkingAuth) {
-  //   return <LoadingSpinner />;
-  // }
-
-  // if (!user) {
-  //   return (
-  //     <div className="flex flex-col min-h-screen">
-  //       <Routes>
-  //         <Route path="/" element={<Layout />}>
-  //           <Route path="/login" element={<LoginPage />} />
-  //           </Route>
-  //       </Routes>
-  //     </div>
-  //   );
-  // }
+  if (checkingAuth) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="flex flex-col min-h-screen capitalize">
@@ -66,47 +58,56 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/contact" element={<ContactUsPage />} />
+            <Route path="/course/:id" element={<CourseDetails />} />
             <Route path="/about" element={<AboutUsPage />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/services" element={<ServicePage />} />
             <Route path="/blog/detail/:id" element={<BlogDetail />} />
-            <Route path="/reset-password/:token" element={<SetNewPassword/>} />
+            <Route path="/reset-password/:token" element={<SetNewPassword />} />
 
-            {user ? (
-              <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<DashboardOverview />} />
-                <Route path="users" element={<UserManagement />} />
-                <Route path="instructor" element={<InstructorsPage />} />
-                {user.role === "student" && (
-                  <Route path="feedback" element={<FeedbackPage />} />
-                )}
-                <Route path="profile" element={<Profile />} />
-                <Route path="courses" element={<CourseManagement />} />
-                <Route path="assessments" element={<AssessmentManagement />} />
-                <Route path="feedback" element={<FeedbackList />} />
-                <Route path="contactUs" element={<ContactMessages />} />
-                <Route path="settings" element={<SettingsPage />} />
-                {user.role === "admin" && (
-                  <>
-                    <Route path="payement" element={<PaymentPage />} />
-                    <Route path="blog" element={<CreateBlog />} />
-                  </>
-                )}
-              </Route>
-            ) : (
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            )}
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardOverview />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="instructor" element={<InstructorsPage />} />
+              {user?.role === "student" && (
+                <Route path="feedback" element={<FeedbackPage />} />
+              )}
+              <Route path="profile" element={<Profile />} />
+              <Route path="courses" element={<CourseManagement />} />
+              <Route path="assessments" element={<AssessmentManagement />} />
+              <Route path="feedback" element={<FeedbackList />} />
+              <Route path="contactUs" element={<ContactMessages />} />
+              <Route path="settings" element={<SettingsPage />} />
+              {user?.role === "admin" && (
+                <>
+                  <Route path="payment" element={<PaymentPage />} />
+                  <Route path="blog" element={<CreateBlog />} />
+                </>
+              )}
+            </Route>
+
+            {/* Redirect unknown paths to login if not authenticated */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Route>
         </Routes>
       </div>
 
       {/* Conditionally render Footer */}
-      {!hideFooter && <Footer className="w-full bg-gradient-to-r from-blue-600 to-teal-500 py-10 px-6 mt-auto" />}
-      
+      {!hideFooter && (
+        <Footer className="w-full bg-gradient-to-r from-blue-600 to-teal-500 py-10 px-6 mt-auto" />
+      )}
+
       <Toaster />
     </div>
   );
 }
 
 export default App;
-

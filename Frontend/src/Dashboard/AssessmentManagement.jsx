@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import useInstructorStore from "../Store/Instractor.Store";
 import useStudentStore from "../Store/student.store";
-import { useUserStore } from "../Store/useAuthStore";
+import  useUserStore  from "../Store/useAuthStore";
 import useAdminStore from "../Store/AdminStore";
 import StudentView from "./Assessment/StudentView";
 import InstructorView from "./Assessment/InstructorView";

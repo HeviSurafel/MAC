@@ -5,6 +5,7 @@ import Carousel from '../Components/Carousel'
 import WhyChooseUs from "../Components/WhyChooseUs"
 import InstructorsPage from '../Components/InstructorsPage'
 import HowItWorks from '../Components/HowItWorks'
+import Faq from '../Components/Faq'
 function HomePage() {
   return (
     <div>
@@ -14,6 +15,7 @@ function HomePage() {
       <WhyChooseUs/>
       <InstructorsPage />
       <Carousel />
+      <Faq />
     </div>
   )
 }

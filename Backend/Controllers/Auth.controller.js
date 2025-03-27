@@ -99,7 +99,7 @@ const login = asyncHandler(async (req, res) => {
     // Respond with user data and success message
     res.status(200).json({
       id: user._id,
-      name: user.firstName,
+      firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phoneNumber,
       email: user.email,

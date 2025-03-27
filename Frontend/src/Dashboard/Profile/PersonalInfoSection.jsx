@@ -1,6 +1,6 @@
 import React,{useEffect} from 'react';
 import { FaPen } from 'react-icons/fa';
-import {useUserStore} from '../../Store/useAuthStore';
+import useUserStore from '../../Store/useAuthStore';
 function PersonalInfoSection({onEdit}) {
   const {user,}=useUserStore();
  console.log(user);

@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { FaEye, FaUserSlash, FaTrash, FaUserCheck } from "react-icons/fa";
-import UserDetailModal from './UserDetailModal'; // Import Modal Component
+import UserDetailModal from "./UserDetailModal"; // Import Modal Component
 
 const UserTable = ({
-  user,
-  courses,
-  users,
+  user, // Logged-in user
+  users, // List of all users
   handleDeleteUser,
   handleSuspendUser,
   handleUnSuspendUser,
-  getUserById
+  getUserById,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,7 +26,8 @@ const UserTable = ({
   const closeModal = () => {
     setIsModalOpen(false); // Close modal
   };
-
+console.log("user",user)
+console.log("users",users)
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden mt-6">
       <table className="w-full">
@@ -37,9 +37,7 @@ const UserTable = ({
             <th className="p-3 text-left">Email</th>
             <th className="p-3 text-left">Role</th>
             <th className="p-3 text-left">Status</th>
-            {user?.role === "admin" && (
-              <th className="p-3 text-left">Actions</th>
-            )}
+            {user?.role === "admin" && <th className="p-3 text-left">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -48,9 +46,7 @@ const UserTable = ({
               key={userItem._id}
               className="border-b hover:bg-gray-50 transition duration-200"
             >
-              <td className="p-3">
-                {userItem.firstName} {userItem.lastName}
-              </td>
+              <td className="p-3">{userItem.firstName} {userItem.lastName}</td>
               <td className="p-3">{userItem.email}</td>
               <td className="p-3">{userItem.role}</td>
               <td className="p-3">
@@ -66,30 +62,45 @@ const UserTable = ({
                   {userItem.status}
                 </span>
               </td>
-              <td className="p-3 flex space-x-2">
-                <button className="text-blue-500 hover:text-blue-700">
-                  <FaEye onClick={() => DetailUser(userItem._id)} />
-                </button>
-                <button
-                  className={`${
-                    userItem.status !== "active"
-                      ? "text-yellow-500 hover:text-yellow-700"
-                      : "text-green-500 hover:text-green-700"
-                  }`}
-                >
-                  {userItem.status === "active" ? (
-                    <FaUserSlash onClick={() => handleSuspendUser(userItem._id)} />
-                  ) : (
-                    <FaUserCheck onClick={() => handleUnSuspendUser(userItem._id)} />
+              {user?.role === "admin" && (
+                <td className="p-3 flex space-x-2">
+                  {user._id !== userItem._id && ( // Prevent user from seeing delete/suspend/view options for themselves
+                    <>
+                      {/* View User Details */}
+                      <button
+                        className="text-blue-500 hover:text-blue-700"
+                        onClick={() => DetailUser(userItem._id)}
+                      >
+                        <FaEye />
+                      </button>
+
+                      {/* Suspend/Unsuspend User */}
+                      <button
+                        className={`${
+                          userItem.status !== "Active"
+                            ? "text-yellow-500 hover:text-yellow-700"
+                            : "text-green-500 hover:text-green-700"
+                        }`}
+                        onClick={() =>
+                          userItem.status === "Active"
+                            ? handleSuspendUser(userItem._id)
+                            : handleUnSuspendUser(userItem._id)
+                        }
+                      >
+                        {userItem.status === "Active" ? <FaUserSlash /> : <FaUserCheck />}
+                      </button>
+
+                      {/* Delete User */}
+                      <button
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteUser(userItem._id)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </>
                   )}
-                </button>
-                <button
-                  className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDeleteUser(userItem._id)}
-                >
-                  <FaTrash />
-                </button>
-              </td>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

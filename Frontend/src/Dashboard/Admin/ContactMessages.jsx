@@ -1,6 +1,6 @@
 import React,{useEffect, useState} from 'react'
 import {toast} from "react-hot-toast"
-import {useUserStore} from "../../Store/useAuthStore"
+import useUserStore from "../../Store/useAuthStore"
 const ContactMessages = () => {
   const {contacts,getContactUs,deleteContactUs}=useUserStore();
   useEffect(()=>{
